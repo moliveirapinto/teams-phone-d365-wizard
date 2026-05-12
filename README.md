@@ -43,8 +43,6 @@ docs/
 
 upload.ps1            # publishes the HTML + PNG web resources to a Dataverse env
 create-solution.ps1   # creates/refreshes the Dataverse solution and exports the zips
-publish.ps1           # publishes all customizations
-setup-entra-app.ps1   # one-off helper to register the sync Entra app (the wizard does this for you on first run)
 ```
 
 ## Install in your tenant
