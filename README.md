@@ -38,9 +38,16 @@ You need the following **once per tenant**. None of this is created by the wizar
 
 ### Step 1 — Download the solution
 
-Grab the **`mauTeamsPhoneSetup_*_managed.zip`** from the latest release:
+Grab one of the two zips from the latest release:
 
 ➡️ **[Download latest release](https://github.com/moliveirapinto/teams-phone-d365-wizard/releases/latest)**
+
+| File | When to pick this one |
+|---|---|
+| `mauTeamsPhoneSetup_*.zip` (**unmanaged**) | **Recommended for most people.** You can edit the wizard, restyle it, change copy, or add fields directly in your environment. Easier to uninstall by simply deleting the components. |
+| `mauTeamsPhoneSetup_*_managed.zip` (managed) | Strict ALM environments where admins want a sealed, read-only solution they can cleanly remove. The wizard cannot be customized in-place — you'd need to re-import an unmanaged version to tweak it. |
+
+Not sure? Pick the **unmanaged** zip. You can always switch later.
 
 ### Step 2 — Import it into your environment
 
@@ -96,9 +103,11 @@ The wizard then walks you through five short steps in order:
 
 When a new release is published:
 
-1. Download the new `mauTeamsPhoneSetup_*_managed.zip` from [Releases](https://github.com/moliveirapinto/teams-phone-d365-wizard/releases).
+1. Download the new zip (**same flavour you originally installed** — unmanaged or managed) from [Releases](https://github.com/moliveirapinto/teams-phone-d365-wizard/releases).
 2. In **Power Apps → Solutions → Import solution**, upload the new zip on top of the old one. Power Platform will prompt **"Upgrade"** — accept it.
 3. The wizard URL stays the same. Just refresh the page.
+
+> ⚠️ Don't mix flavours. You cannot import a managed zip on top of an unmanaged one (or vice-versa) — Power Platform will reject it. If you really need to switch, uninstall the old solution first.
 
 ---
 
