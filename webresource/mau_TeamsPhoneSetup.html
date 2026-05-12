@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Teams Phone Setup</title>
+<style>
+  :root{
+    --bg:#faf9f8; --surface:#ffffff; --line:#edebe9; --line-2:#e1dfdd;
+    --text:#252423; --muted:#605e5c; --muted-2:#8a8886;
+    --brand:#5b5fc7; --brand-d:#464ec1; --brand-l:#e8eaff;
+    --ok:#107c10; --ok-bg:#dff6dd;
+    --warn:#a04400; --warn-bg:#fff4ce;
+    --err:#a4262c; --err-bg:#fde7e9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:14px;line-height:1.45;overflow-x:hidden}
+  a{color:var(--brand);text-decoration:none} a:hover{text-decoration:underline}
+  code{font-family:Consolas,Menlo,Monaco,monospace;font-size:12.5px;background:#f3f2f1;padding:1px 5px;border-radius:3px}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 22px 32px}
+  .header{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .header h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .header .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .header .ctx{margin-left:auto;text-align:right;font-size:11.5px;color:var(--muted)}
+  .header .ctx strong{color:var(--text);font-weight:600}
+  .stepper{display:flex;align-items:center;gap:6px;margin:6px 0 22px;flex-wrap:wrap}
+  .stp{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line-2);background:var(--surface);border-radius:99px;font-size:12.5px;color:var(--muted);transition:all .15s}
+  .stp .num{width:20px;height:20px;border-radius:50%;background:#f3f2f1;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--muted)}
+  .stp.active{background:var(--brand-l);border-color:var(--brand);color:var(--brand-d)}
+  .stp.active .num{background:var(--brand);color:#fff}
+  .stp.done{background:var(--ok-bg);border-color:#9fd49f;color:var(--ok)}
+  .stp.done .num{background:var(--ok);color:#fff}
+  .stp.done .num::before{content:"✓"} .stp.done .num span{display:none}
+  .stp-arrow{color:var(--line-2);font-size:14px}
+  .row{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+  .row > *{min-width:0}
+  @media (max-width:920px){.row{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 24px;box-shadow:0 1px 2px rgba(0,0,0,.03);min-width:0}
+  .card h2{margin:0 0 4px;font-size:15px;font-weight:600;letter-spacing:.01em}
+  .card .lead{color:var(--muted);font-size:12.5px;margin:0 0 18px}
+  .banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:7px;font-size:12.5px;line-height:1.55;margin-bottom:14px}
+  .banner.ok{background:var(--ok-bg);color:#0c5e0c;border:1px solid #9fd49f}
+  .banner.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #f1d597}
+  .banner.err{background:var(--err-bg);color:var(--err);border:1px solid #f3aeb1}
+  .banner.info{background:var(--brand-l);color:var(--brand-d);border:1px solid #c3c7f0}
+  .banner .ic{font-weight:700;flex-shrink:0;font-size:14px;line-height:1.4}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+  .field label .req{color:var(--err);margin-left:2px}
+  .field label .auto{color:var(--ok);font-weight:500;font-size:11px;margin-left:8px}
+  .field label .opt{color:var(--muted);font-weight:500;font-size:11px;margin-left:8px}
+  .field input{width:100%;padding:8px 10px;border:1px solid var(--line-2);border-radius:4px;font-size:13.5px;font-family:inherit;background:#fff;transition:border-color .12s,box-shadow .12s}
+  .field input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+  .field input.invalid{border-color:var(--err);box-shadow:0 0 0 1px var(--err)}
+  .field input[readonly]{background:#f3f2f1;color:var(--muted);cursor:not-allowed}
+  .field .help{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .field .err-msg{font-size:11.5px;color:var(--err);margin-top:4px;min-height:14px}
+  .ps{background:#012456;color:#eef;font-family:Consolas,Menlo,Monaco,monospace;font-size:12.5px;line-height:1.6;padding:16px 18px;border-radius:8px;overflow:auto;max-height:520px;white-space:pre;max-width:100%}
+  .ps .c{color:#7a96d6} .ps .v{color:#9cdcfe} .ps .s{color:#ce9178} .ps .k{color:#c586c0}
+  .ps-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .ps-toolbar .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line-2);border-radius:4px;background:#fff;color:var(--text);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .12s;text-decoration:none}
+  .btn:hover{background:#f3f2f1;border-color:var(--muted-2);text-decoration:none}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .btn.primary:hover{background:var(--brand-d);border-color:var(--brand-d)}
+  .btn .ic{font-size:13px}
+  .divider{height:1px;background:var(--line);margin:18px -24px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+  @media (max-width:480px){.actions{grid-template-columns:1fr}}
+  .action{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line-2);border-radius:7px;background:#fff;cursor:pointer;transition:all .12s;text-decoration:none;color:var(--text)}
+  .action:hover{background:var(--brand-l);border-color:var(--brand);text-decoration:none}
+  .action .title{font-size:13px;font-weight:600;line-height:1.3}
+  .action .desc{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(150px);background:var(--text);color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:transform .25s;z-index:1000}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--err)} .toast.ok{background:var(--ok)}
+  .tabs{display:flex;gap:2px;background:#f3f2f1;border-radius:5px;padding:3px;margin:6px 0 12px;width:fit-content}
+  .tab{padding:6px 14px;border-radius:4px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:transparent;font-family:inherit}
+  .tab.active{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  details{margin-top:10px;font-size:12.5px;color:var(--muted)}
+  details summary{cursor:pointer;font-weight:600;color:var(--text);padding:4px 0}
+  details > div{padding:8px 0 4px;line-height:1.6}
+  .example{margin-top:8px;display:block;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;background:#fff}
+  .example img{display:block;width:100%;height:auto}
+  .example .cap{font-size:11px;color:var(--muted);padding:5px 8px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1>Teams Phone for D365 Contact Center</h1>
+      <div class="sub">Bring a Teams Phone number into the Voice channel. Asks only what's required by the official onboarding script.</div>
+    </div>
+    <div class="ctx">
+      Signed in as <strong id="ctxUser">—</strong><br>
+      Tenant: <strong id="ctxTenant">—</strong>
+    </div>
+  </div>
+
+  <div class="banner warn" role="note" style="margin-bottom:14px">
+    <span class="ic">!</span>
+    <div>
+      <strong>Before you start — phone number prerequisites</strong><br>
+      This guide does <strong>not</strong> provision Teams phone numbers. You must already have a number assigned in Teams, and it must be of type <strong>Call Queue</strong> or <strong>Auto Attendant</strong>. User (DID) numbers are not supported by the Voice channel onboarding flow.<br>
+      <a href="https://learn.microsoft.com/microsoftteams/getting-service-phone-numbers" target="_blank">Get service numbers for Teams ↗</a>
+    </div>
+  </div>
+
+  <div id="banners"></div>
+
+  <div class="row">
+
+    <div class="card">
+      <h2>Step 1 — Resource account</h2>
+      <p class="lead">Required by <code>New-CsOnlineApplicationInstance</code>.</p>
+
+      <div class="field">
+        <label>Display name <span class="req">*</span><span class="auto" id="auto_display"></span></label>
+        <input id="f_display" type="text" placeholder="Contact Center Main Line" />
+        <div class="help">A friendly label for the resource account (e.g. <code>Contact Center Main Line</code>, <code>Sales Hotline</code>). Pick anything — it's just how the account shows up in Teams admin and in D365.</div>
+        <div class="err-msg" id="e_display"></div>
+      </div>
+
+      <div class="field">
+        <label>Resource account email <span class="req">*</span><span class="auto" id="auto_upn"></span></label>
+        <input id="f_upn" type="email" placeholder="cc-mainline@yourtenant.onmicrosoft.com" />
+        <div class="help">Make up any address you like — for example <code>cc-mainline</code>, <code>support-line</code>, <code>sales-hotline</code> — as long as the domain belongs to this tenant. The script will create the user automatically; it doesn't need to exist yet.</div>
+        <div class="err-msg" id="e_upn"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2 style="margin-top:6px">Step 2 — D365 binding</h2>
+      <p class="lead">Required to link the resource account to your D365 voice channel via ACS.</p>
+
+      <div class="field">
+        <label>Azure Communication Services resource ID <span class="req">*</span><span class="auto" id="auto_acs"></span></label>
+        <input id="f_acs" type="text" placeholder="/subscriptions/.../Microsoft.Communication/communicationServices/{name} or 8:acs:..." />
+        <div class="help">Find it in <strong>Admin Center → Channels → Phone numbers → Advanced → Teams phone system</strong> tab.
+          <a class="example" href="mau_teamsphone_example.png" target="_blank" title="Open full-size">
+            <img src="mau_teamsphone_example.png" alt="Manage telephony → Teams phone system tab showing Azure Communication Services resource ID and Dynamics App ID" />
+            <div class="cap">Example: copy the value under <strong>Azure Communication Services resource ID</strong>.</div>
+          </a>
+        </div>
+        <div class="err-msg" id="e_acs"></div>
+      </div>
+
+      <div class="field">
+        <label>Dynamics App ID <span class="req">*</span></label>
+        <input id="f_appId" type="text" placeholder="GUID issued by Microsoft for your tenant" />
+        <div class="help">Find it in <strong>Admin Center → Channels → Phone numbers → Advanced → Teams phone system</strong> tab.
+          <a class="example" href="mau_teamsphone_example.png" target="_blank" title="Open full-size">
+            <img src="mau_teamsphone_example.png" alt="Manage telephony → Teams phone system tab showing Azure Communication Services resource ID and Dynamics App ID" />
+            <div class="cap">Example: copy the value under <strong>Dynamics App ID</strong>.</div>
+          </a>
+        </div>
+        <div class="err-msg" id="e_appId"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2 style="margin-top:6px">Step 3 — PSTN connectivity</h2>
+      <p class="lead">Determines how the number is assigned. The script changes accordingly.</p>
+
+      <div class="field">
+        <div class="tabs" id="pstnTabs">
+          <button class="tab active" data-pstn="CallingPlan">Calling Plan</button>
+          <button class="tab" data-pstn="OperatorConnect">Operator Connect</button>
+          <button class="tab" data-pstn="DirectRouting">Direct Routing</button>
+        </div>
+        <div class="help" id="pstnHelp">Calling Plan (service numbers only) — assignment done via Teams admin center UI; phone number not needed in script.</div>
+      </div>
+
+      <div class="field" id="phoneWrap">
+        <label>Phone number (E.164) <span class="req" id="phoneReq">*</span><span class="opt" id="phoneOpt" style="display:none">· assigned in Teams admin center for Calling Plan</span></label>
+        <input id="f_phone" type="tel" placeholder="+14155550123" />
+        <div class="help">Service number in E.164 format. Must already exist in Teams admin center.</div>
+        <div class="err-msg" id="e_phone"></div>
+      </div>
+
+      <div class="field" id="drPolicyWrap" style="display:none">
+        <label>Direct Routing voice routing policy</label>
+        <input id="f_drPolicy" type="text" placeholder="MyVoiceRoutingPolicy" />
+        <div class="help">Required so the resource account can place outbound consult/transfer calls.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Step 4 — Run this PowerShell as a Teams Administrator</h2>
+      <p class="lead">Single script — installs the module, signs in, creates the resource account, binds Teams, and assigns the number.</p>
+
+      <div class="ps-toolbar">
+        <span class="label">PowerShell · run as admin</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn" id="btnDownload" title="Save as .ps1 file">Download .ps1</button>
+          <button class="btn primary" id="btnCopyPs">Copy script</button>
+        </div>
+      </div>
+      <div class="ps" id="psBlock"></div>
+
+      <div class="divider"></div>
+
+      <h2>Step 5 — Finish in admin portals</h2>
+      <p class="lead">After the script succeeds, complete the rest here.</p>
+
+      <div class="actions">
+        <a class="action" href="https://admin.microsoft.com/Adminportal/Home#/users" target="_blank">
+          <div>
+            <div class="title">Step 5.1 — Assign license</div>
+            <div class="desc">M365 admin → assign <strong>Microsoft Teams Phone Resource Account</strong> license (free). <strong>Also assign a Calling Plan license</strong> when using Calling Plans.</div>
+          </div>
+        </a>
+        <a class="action" href="https://admin.teams.microsoft.com/company-wide-settings/resource-accounts" target="_blank">
+          <div>
+            <div class="title">Step 5.2 — Verify in Teams</div>
+            <div class="desc">Teams admin → Resource accounts → click on your new resource account → pick <strong>Call queue</strong> or <strong>Auto attendant</strong> (based on your phone number configuration).</div>
+          </div>
+        </a>
+        <a class="action" id="lnkChannels" href="#" target="_blank">
+          <div>
+            <div class="title">Step 5.3 — D365 Channels → Sync from Teams</div>
+            <div class="desc">Channels → Phone numbers → Advanced → Teams phone system → Sync from Teams</div>
+          </div>
+        </a>
+      </div>
+
+      <details>
+        <summary>Troubleshooting</summary>
+        <div>
+          <strong>"Instance not found" on Set-CsOnlineApplicationInstance</strong> — wait 60–120s after creating the resource account for AAD propagation. The script already includes a 60s wait.<br><br>
+          <strong>Sync from Teams returns 500 / nothing</strong> — re-run the script. It re-checks (and creates if missing) the Entra app registration with <code>TeamsResourceAccount.Read.All</code> + admin consent that "Sync from Teams" requires.<br><br>
+          <strong>Calling Plan numbers</strong> — only service numbers are supported. Acquire one in Teams admin center first, then assign it to this resource account through the Teams admin UI (the script skips <code>Set-CsPhoneNumberAssignment</code> for this path).<br><br>
+          <strong>Official documentation:</strong> <a href="https://learn.microsoft.com/en-us/dynamics365/contact-center/administer/configure-teams-phone-in-voice-channel" target="_blank">Configure Teams Phone in voice channel ↗</a> · <a href="https://github.com/microsoft/Dynamics365-Apps-Samples/blob/master/contact-center/TeamsPhoneSystem-TeamsAdminCenterOnboardScript.ps1" target="_blank">Microsoft sample onboarding script ↗</a>
+        </div>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const STORAGE_KEY = 'mau_teamsphone_setup_v3';
+let xrmCtx = null;
+try { xrmCtx = (window.parent && window.parent.Xrm) ? window.parent.Xrm : (window.Xrm || null); } catch(e){}
+
+function getOrgUrl(){
+  try{
+    if(xrmCtx && xrmCtx.Utility && xrmCtx.Utility.getGlobalContext){
+      return xrmCtx.Utility.getGlobalContext().getClientUrl();
+    }
+  }catch(e){}
+  return location.origin;
+}
+const ORG_URL = getOrgUrl();
+
+const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+const DEFAULT_APP_ID = '';
+const state = {
+  display:'', upn:'', phone:'', acs:'', drPolicy:'',
+  appId: DEFAULT_APP_ID,
+  pstn:'CallingPlan',
+  ...stored
+};
+function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function banner(kind, html){
+  const el = document.createElement('div');
+  el.className = 'banner ' + kind;
+  el.innerHTML = `<span class="ic">${{ok:'✓',warn:'!',err:'×',info:'i'}[kind]||'i'}</span><div>${html}</div>`;
+  document.getElementById('banners').appendChild(el);
+}
+
+let toastT;
+function toast(msg, kind='ok'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + kind;
+  clearTimeout(toastT);
+  toastT = setTimeout(()=> el.classList.remove('show'), 2200);
+}
+
+async function detectContext(){
+  let userName = '—', userEmail = '', tenantDomain = 'yourtenant.onmicrosoft.com', userId = '';
+
+  // 1) Try parent Xrm (when hosted inside a model-driven app form)
+  try{
+    if(xrmCtx && xrmCtx.Utility && xrmCtx.Utility.getGlobalContext){
+      const g = xrmCtx.Utility.getGlobalContext();
+      userName = g.userSettings.userName || userName;
+      userId   = (g.userSettings.userId || '').replace(/[{}]/g,'');
+    }
+  } catch(e){ console.warn('Xrm context unavailable', e); }
+
+  // 2) Fallback: WhoAmI via Dataverse Web API (works when page opened directly,
+  //    same-origin cookie auth)
+  if(!userId){
+    try{
+      const r = await fetch(`${ORG_URL}/api/data/v9.2/WhoAmI`, {credentials:'include', headers:{Accept:'application/json'}});
+      if(r.ok){ const j = await r.json(); userId = (j.UserId || '').replace(/[{}]/g,''); }
+    }catch(e){ console.warn('WhoAmI failed', e); }
+  }
+
+  // 3) Get the user's UPN/email + display name from the systemuser row
+  if(userId){
+    try{
+      const r = await fetch(`${ORG_URL}/api/data/v9.2/systemusers(${userId})?$select=internalemailaddress,domainname,fullname`, {credentials:'include', headers:{Accept:'application/json'}});
+      if(r.ok){
+        const j = await r.json();
+        userEmail = j.internalemailaddress || j.domainname || '';
+        if(userName === '—' && j.fullname) userName = j.fullname;
+      }
+    }catch(e){ console.warn('systemuser lookup failed', e); }
+  }
+
+  // 4) Last-resort tenant guess from the org host (e.g. contoso.crm.dynamics.com)
+  if(!userEmail){
+    try{
+      const host = new URL(ORG_URL).hostname.split('.')[0];
+      if(host && host !== 'localhost') tenantDomain = `${host}.onmicrosoft.com`;
+    }catch(e){}
+  } else {
+    const m = userEmail.match(/@(.+)$/); if(m) tenantDomain = m[1];
+  }
+
+  document.getElementById('ctxUser').textContent = userName;
+  document.getElementById('ctxTenant').textContent = tenantDomain;
+
+  if(!state.upn) { state.upn = `cc-mainline@${tenantDomain}`; document.getElementById('auto_upn').textContent = '· suggested'; }
+  if(!state.display){ state.display = 'Contact Center Main Line'; document.getElementById('auto_display').textContent = '· suggested'; }
+  refreshFromState();
+}
+
+async function detectAcs(){
+  // The ACS binding lives in msdyn_occommunicationprovidersetting.
+  //   msdyn_occommunicationprovider = 192350000 -> Azure Communication Services
+  //                                 = 192350003 -> Microsoft Teams Phone System
+  //   msdyn_occommunicationproviderimmutableid -> the "Immutable Resource ID"
+  //   msdyn_accountsid -> the ACS resource's full ARM id (handy for display)
+  // We want the ACTIVE ACS row (statecode=0).
+  try{
+    const url = `${ORG_URL}/api/data/v9.2/msdyn_occommunicationprovidersettings`
+              + `?$select=msdyn_name,msdyn_occommunicationproviderimmutableid,msdyn_accountsid,msdyn_occommunicationprovider,statecode`
+              + `&$filter=msdyn_occommunicationprovider eq 192350000 and statecode eq 0`
+              + `&$orderby=modifiedon desc&$top=1`;
+    const r = await fetch(url, {credentials:'include', headers:{Accept:'application/json'}});
+    if(r.ok){
+      const j = await r.json();
+      if(j.value && j.value.length){
+        const row = j.value[0];
+        const id  = row.msdyn_occommunicationproviderimmutableid;
+        if(id){
+          if(!state.acs){
+            state.acs = id;
+            document.getElementById('auto_acs').textContent = '· auto-detected';
+            persist(); refreshFromState();
+          }
+          const acsName = row.msdyn_name || (row.msdyn_accountsid||'').split('/').pop() || 'ACS';
+          banner('ok', `Voice channel detected. ACS Resource ID auto-loaded from <code>${acsName}</code>.`);
+          return;
+        }
+      }
+    }
+  }catch(e){ console.warn('ACS probe failed', e); }
+
+  // Couldn't find an active ACS provider row → guide the user to the in-app setup.
+  const orgHost = ORG_URL.replace(/\/+$/,'');
+  const acsLink = `${orgHost}/main.aspx?appname=msdyn_CustomerServiceWorkspace`;
+  banner('warn', `Voice channel not detected in this environment. Provision Voice + ACS first, then paste the Immutable Resource ID above. <a href="${acsLink}" target="_blank">Open Customer Service workspace →</a>`);
+}
+
+const validators = {
+  upn:     v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || 'Must be a valid UPN/email',
+  phone:   v => /^\+[1-9]\d{6,14}$/.test(v) || 'Must be E.164 format: +<country><number>',
+  display: v => v.length > 0 || 'Required',
+  acs:     v => v.length > 10 || 'Paste the full Azure Communication Services resource ID',
+  appId:   v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) || 'Must be a GUID'
+};
+function validateAll(){
+  let ok = true;
+  // phone is conditional
+  const requireFields = state.pstn === 'CallingPlan'
+    ? ['display','upn','acs','appId']
+    : ['display','upn','acs','phone','appId'];
+  for(const f of ['display','upn','acs','phone','appId']){
+    const errEl = document.getElementById('e_'+f);
+    const inEl = document.getElementById('f_'+f);
+    if(!errEl || !inEl) continue;
+    if(!requireFields.includes(f)){ errEl.textContent=''; inEl.classList.remove('invalid'); continue; }
+    const v = (state[f]||'').trim();
+    const res = validators[f](v);
+    if(res === true){ errEl.textContent=''; inEl.classList.remove('invalid'); }
+    else { errEl.textContent = res; inEl.classList.add('invalid'); ok = false; }
+  }
+  return ok;
+}
+
+function bindInput(id, key){
+  const el = document.getElementById('f_'+id);
+  el.value = state[key] || '';
+  el.addEventListener('input', () => {
+    state[key] = el.value.trim();
+    const a = document.getElementById('auto_'+id); if(a) a.textContent = '';
+    persist(); refreshFromState();
+  });
+}
+['display','upn','phone','acs','appId'].forEach(k => bindInput(k,k));
+const drIn = document.getElementById('f_drPolicy');
+drIn.value = state.drPolicy || '';
+drIn.addEventListener('input', ()=> { state.drPolicy = drIn.value.trim(); persist(); refreshFromState(); });
+
+document.getElementById('pstnTabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if(!t) return;
+  document.querySelectorAll('#pstnTabs .tab').forEach(x => x.classList.toggle('active', x===t));
+  state.pstn = t.dataset.pstn; persist(); refreshFromState();
+});
+
+function escapePs(s){ return String(s||'').replace(/`/g,'``').replace(/"/g,'`"').replace(/\$/g,'`$'); }
+
+function buildPs(){
+  const upn = state.upn || '<UPN>';
+  const display = state.display || '<DisplayName>';
+  const phone = state.phone || '<+E164>';
+  const acs = state.acs || '<ACS_IMMUTABLE_RESOURCE_ID>';
+  const drPolicy = state.drPolicy || '';
+  const pstn = state.pstn;
+  const appId = (state.appId || '').trim();
+
+  let assignBlock;
+  if(pstn === 'CallingPlan'){
+    assignBlock =
+`# 5) Calling Plan service numbers — assign in Teams admin center UI.
+#    https://admin.teams.microsoft.com/company-wide-settings/resource-accounts
+Write-Host "Assign the Calling Plan service number to '$Upn' in Teams admin center, then continue." -ForegroundColor Yellow`;
+  } else if(pstn === 'DirectRouting'){
+    assignBlock =
+`# 5) Assign Direct Routing service number
+Set-CsPhoneNumberAssignment -Identity $Upn -PhoneNumber $Phone -PhoneNumberType DirectRouting
+
+# 6) Grant voice routing policy (required for outbound consult/transfer)
+${drPolicy ? `Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "${escapePs(drPolicy)}"` : `# Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "<your DR policy name>"`}`;
+  } else {
+    assignBlock =
+`# 5) Assign Operator Connect number
+Set-CsPhoneNumberAssignment -Identity $Upn -PhoneNumber $Phone -PhoneNumberType OperatorConnect`;
+  }
+
+  return `# ============================================================
+#  Teams Phone -> D365 Contact Center onboarding
+#  Generated by Power Apps web resource
+#  Mirrors: learn.microsoft.com/.../configure-teams-phone-in-voice-channel
+#  Run as a Teams Administrator + Application Administrator (or Global Admin)
+#  in an elevated PowerShell session
+# ============================================================
+
+$AppId       = "${escapePs(appId)}"   # Dynamics application id
+$Upn         = "${escapePs(upn)}"
+$DisplayName = "${escapePs(display)}"
+$Phone       = "${escapePs(phone)}"
+$AcsId       = "${escapePs(acs)}"
+
+# 1) Install/Import the modules we need
+foreach ($m in 'MicrosoftTeams','Microsoft.Graph.Applications','Microsoft.Graph.Identity.SignIns') {
+  if (-not (Get-Module -ListAvailable -Name $m)) {
+    Write-Host "Installing $m ..." -ForegroundColor Cyan
+    Install-Module $m -Scope CurrentUser -Force -AllowClobber
+  }
+}
+Import-Module MicrosoftTeams
+Import-Module Microsoft.Graph.Applications
+Import-Module Microsoft.Graph.Identity.SignIns
+
+# 2) Ensure the Entra app that powers "Sync from Teams" exists in this tenant
+#    (D365 needs an Entra app with delegated TeamsResourceAccount.Read.All
+#    + admin consent; first run creates it, later runs just verify.)
+Write-Host ""
+Write-Host "Ensuring Entra app for 'Sync from Teams' ..." -ForegroundColor Cyan
+Connect-MgGraph -Scopes 'Application.ReadWrite.All','DelegatedPermissionGrant.ReadWrite.All','Directory.ReadWrite.All' -NoWelcome | Out-Null
+
+$syncAppName = 'D365 Contact Center - Teams Phone Sync'
+$graphAppId  = '00000003-0000-0000-c000-000000000000'
+$scopeName   = 'TeamsResourceAccount.Read.All'
+
+$graphSp = Get-MgServicePrincipal -Filter "appId eq '$graphAppId'"
+$scope   = $graphSp.Oauth2PermissionScopes | Where-Object { $_.Value -eq $scopeName }
+if (-not $scope) { throw "Microsoft Graph scope '$scopeName' not found." }
+
+$syncApp = Get-MgApplication -Filter "displayName eq '$syncAppName'" -ConsistencyLevel eventual -CountVariable c -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $syncApp) {
+  Write-Host "  Creating Entra app '$syncAppName' ..." -ForegroundColor Cyan
+  $syncApp = New-MgApplication -DisplayName $syncAppName -SignInAudience AzureADMyOrg -RequiredResourceAccess @(@{
+    ResourceAppId  = $graphAppId
+    ResourceAccess = @(@{ Id = $scope.Id; Type = 'Scope' })
+  })
+} else {
+  Write-Host "  Reusing Entra app $($syncApp.AppId)" -ForegroundColor DarkGray
+  # Make sure the required permission is on the manifest
+  $hasPerm = $syncApp.RequiredResourceAccess | Where-Object {
+    $_.ResourceAppId -eq $graphAppId -and ($_.ResourceAccess | Where-Object { $_.Id -eq $scope.Id })
+  }
+  if (-not $hasPerm) {
+    Update-MgApplication -ApplicationId $syncApp.Id -RequiredResourceAccess @(@{
+      ResourceAppId  = $graphAppId
+      ResourceAccess = @(@{ Id = $scope.Id; Type = 'Scope' })
+    })
+  }
+}
+$syncSp = Get-MgServicePrincipal -Filter "appId eq '$($syncApp.AppId)'" -ErrorAction SilentlyContinue
+if (-not $syncSp) { $syncSp = New-MgServicePrincipal -AppId $syncApp.AppId }
+
+# Grant tenant-wide delegated admin consent (idempotent)
+$grant = Get-MgOauth2PermissionGrant -Filter "clientId eq '$($syncSp.Id)' and resourceId eq '$($graphSp.Id)' and consentType eq 'AllPrincipals'" -ErrorAction SilentlyContinue
+if (-not $grant) {
+  New-MgOauth2PermissionGrant -ClientId $syncSp.Id -ConsentType AllPrincipals -ResourceId $graphSp.Id -Scope $scopeName | Out-Null
+  Write-Host "  Admin consent granted." -ForegroundColor Green
+} elseif ($grant.Scope -notmatch [regex]::Escape($scopeName)) {
+  Update-MgOauth2PermissionGrant -OAuth2PermissionGrantId $grant.Id -Scope ($grant.Scope + ' ' + $scopeName).Trim() | Out-Null
+  Write-Host "  Admin consent updated." -ForegroundColor Green
+} else {
+  Write-Host "  Admin consent already in place." -ForegroundColor DarkGray
+}
+Disconnect-MgGraph | Out-Null
+
+# 3) Sign in to Teams (browser prompt)
+Connect-MicrosoftTeams | Out-Null
+Write-Host "Connected to Microsoft Teams." -ForegroundColor Green
+
+# 4) Create the Teams resource account bound to the Dynamics app (idempotent)
+$existing = Get-CsOnlineApplicationInstance -Identity $Upn -ErrorAction SilentlyContinue
+if ($existing) {
+  Write-Host "Resource account $Upn already exists. ObjectId = $($existing.ObjectId)" -ForegroundColor Yellow
+  $ra = $existing
+} else {
+  Write-Host "Creating resource account $Upn ..." -ForegroundColor Cyan
+  $ra = New-CsOnlineApplicationInstance -UserPrincipalName $Upn -DisplayName $DisplayName -ApplicationId $AppId
+  if (-not $ra -or -not $ra.ObjectId) { throw "Failed to create resource account." }
+  Write-Host "Created. ObjectId = $($ra.ObjectId)" -ForegroundColor Green
+  Write-Host "Waiting 60s for directory propagation..." -ForegroundColor DarkYellow
+  Start-Sleep -Seconds 60
+}
+
+# 5) Associate the Azure Communication Services resource and sync
+Set-CsOnlineApplicationInstance  -Identity $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId
+Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId
+Write-Host "ACS associated and synced." -ForegroundColor Green
+
+${assignBlock}
+
+Write-Host ""
+Write-Host "=== Next steps ===" -ForegroundColor Magenta
+Write-Host "  - Assign 'Microsoft Teams Phone Resource Account' license (free) to $Upn in M365 admin center."
+Write-Host "  - In D365: Channels -> Phone numbers -> Advanced -> Teams phone system -> 'Sync from Teams'."
+Write-Host "  - Add the synced number to a voice workstream."
+`;
+}
+
+function highlightPs(src){
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let out = esc(src);
+  out = out.replace(/("([^"\\]|\\.)*")/g,'<span class="s">$1</span>');
+  out = out.replace(/(^|\n)(\s*#[^\n]*)/g,'$1<span class="c">$2</span>');
+  out = out.replace(/(\$[A-Za-z_][\w]*)/g,'<span class="v">$1</span>');
+  out = out.replace(/\b(Install-Module|Import-Module|Connect-MicrosoftTeams|New-CsOnlineApplicationInstance|Set-CsOnlineApplicationInstance|Sync-CsOnlineApplicationInstance|Get-CsOnlineApplicationInstance|Set-CsPhoneNumberAssignment|Grant-CsOnlineVoiceRoutingPolicy|Connect-MgGraph|Disconnect-MgGraph|Get-MgServicePrincipal|New-MgServicePrincipal|Get-MgApplication|New-MgApplication|Update-MgApplication|Get-MgOauth2PermissionGrant|New-MgOauth2PermissionGrant|Update-MgOauth2PermissionGrant|Get-Module|Write-Host|Start-Sleep|Out-Null|foreach|throw)\b/g,'<span class="k">$1</span>');
+  return out;
+}
+
+function refreshFromState(){
+  document.getElementById('f_display').value = state.display || '';
+  document.getElementById('f_upn').value = state.upn || '';
+  document.getElementById('f_phone').value = state.phone || '';
+  document.getElementById('f_acs').value = state.acs || '';
+  document.getElementById('f_appId').value = state.appId || '';
+  document.getElementById('f_drPolicy').value = state.drPolicy || '';
+  document.querySelectorAll('#pstnTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.pstn===state.pstn));
+  document.getElementById('drPolicyWrap').style.display = state.pstn==='DirectRouting' ? '' : 'none';
+
+  // Phone field: required for OC/DR, optional/explanatory for CP
+  const isCP = state.pstn === 'CallingPlan';
+  document.getElementById('phoneReq').style.display = isCP ? 'none' : '';
+  document.getElementById('phoneOpt').style.display = isCP ? '' : 'none';
+  const phoneInput = document.getElementById('f_phone');
+  phoneInput.placeholder = isCP ? '(assigned in Teams admin center for Calling Plan)' : '+14155550123';
+
+  document.getElementById('pstnHelp').textContent = {
+    OperatorConnect: 'Operator Connect — number assigned via PowerShell.',
+    DirectRouting:   'Direct Routing — assigns number + grants voice routing policy.',
+    CallingPlan:     'Calling Plan (service numbers only) — assignment done via Teams admin center UI; phone number not needed in script.',
+  }[state.pstn];
+
+  document.getElementById('psBlock').innerHTML = highlightPs(buildPs());
+  validateAll();
+
+  // D365 Channels deep link — find an app module that hosts the voice channel
+  // settings (Customer Service workspace, Omnichannel, or Customer Service Hub),
+  // querying the live appmodule table so it works in any tenant.
+  const orgHost = ORG_URL.replace(/\/+$/,'');
+  document.getElementById('lnkChannels').href = `${orgHost}/main.aspx`; // safe fallback
+  setChannelsLink(orgHost);
+}
+
+async function setChannelsLink(orgHost){
+  // The "Phone numbers" admin grid lives in the Customer Service Admin Center app
+  // (uniquename = msdyn_CSAdminCenter), opened with a control deep link.
+  // We resolve the app at runtime so this works in any tenant. If the admin
+  // center isn't installed we fall back to Customer Service workspace / Hub.
+  const adminPreferred = ['msdyn_CSAdminCenter'];
+  const fallbackPreferred = [
+    'msdyn_CustomerServiceWorkspace',
+    'OmniChannelEngagementHub',
+    'Customerservicehub',
+  ];
+  try{
+    const r = await fetch(`${ORG_URL}/api/data/v9.2/appmodules?$select=uniquename,name&$filter=statecode eq 0`,
+      {credentials:'include', headers:{Accept:'application/json'}});
+    if(r.ok){
+      const j = await r.json();
+      const apps = j.value || [];
+      const have = new Set(apps.map(a => a.uniquename));
+
+      // 1) Prefer the Admin Center + direct Phone Numbers control deep link
+      const admin = adminPreferred.find(u => have.has(u))
+                 || apps.find(a => /admin\s*center/i.test(a.name||''))?.uniquename;
+      if(admin){
+        document.getElementById('lnkChannels').href =
+          `${orgHost}/main.aspx?appname=${encodeURIComponent(admin)}`
+          + `&pagetype=control&controlName=MscrmControls.ModernAdmin.PhoneNumbersControl`;
+        return;
+      }
+
+      // 2) Fall back to any agent-facing Service app (root)
+      const fallback = fallbackPreferred.find(u => have.has(u))
+                    || apps.find(a => /workspace/i.test(a.name||''))?.uniquename
+                    || apps.find(a => /customer service/i.test(a.name||''))?.uniquename;
+      if(fallback){
+        document.getElementById('lnkChannels').href = `${orgHost}/main.aspx?appname=${encodeURIComponent(fallback)}`;
+        return;
+      }
+    }
+  }catch(e){ console.warn('appmodule lookup failed', e); }
+  // Last-resort: open the org root so the user can pick the app themselves.
+  document.getElementById('lnkChannels').href = orgHost;
+}
+
+document.getElementById('btnCopyPs').onclick = () => {
+  if(!validateAll()){ toast('Fill required fields first', 'err'); return; }
+  navigator.clipboard.writeText(buildPs()).then(()=> toast('PowerShell copied to clipboard'));
+  setStep(2);
+};
+document.getElementById('btnDownload').onclick = () => {
+  if(!validateAll()){ toast('Fill required fields first', 'err'); return; }
+  const blob = new Blob([buildPs()], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Onboard-TeamsPhone-${(state.display||'number').replace(/\W+/g,'-')}.ps1`;
+  a.click();
+  setStep(2);
+};
+
+function setStep(n){
+  document.querySelectorAll('.stp').forEach(el => {
+    const i = parseInt(el.dataset.stp,10);
+    el.classList.toggle('active', i===n);
+    el.classList.toggle('done', i<n);
+  });
+}
+
+(async function init(){
+  await detectContext();
+  refreshFromState();
+  await detectAcs();
+})();
+</script>
+</body>
+</html>

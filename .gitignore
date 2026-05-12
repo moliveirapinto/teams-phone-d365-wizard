@@ -1,0 +1,5 @@
+# build / IDE
+.vs/
+.vscode/
+*.user
+node_modules/
