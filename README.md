@@ -4,7 +4,7 @@ A friendly, point-and-click setup wizard that brings a **Teams Phone** number in
 
 You install it once, open it from inside D365, fill in two boxes, and the wizard does the rest.
 
-![Wizard screenshot](docs/screenshot.jpeg)
+![Wizard screenshot](docs/01image.png)
 
 ---
 
