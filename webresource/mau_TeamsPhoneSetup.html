@@ -182,9 +182,9 @@
       </div>
 
       <div class="field" id="drPolicyWrap" style="display:none">
-        <label>Direct Routing voice routing policy</label>
+        <label>Direct Routing voice routing policy <span class="opt">(optional)</span></label>
         <input id="f_drPolicy" type="text" placeholder="MyVoiceRoutingPolicy" />
-        <div class="help">Required so the resource account can place outbound consult/transfer calls.</div>
+        <div class="help">Name of an existing voice routing policy so the resource account can place outbound consult/transfer calls. Leave blank to use the global (org-wide default) policy - do <strong>not</strong> type "Global (Org-wide default)", that is a label, not a real policy name. Run <code>Get-CsOnlineVoiceRoutingPolicy</code> in Teams PowerShell to see valid names.</div>
       </div>
     </div>
 
@@ -443,8 +443,8 @@ Write-Host "Assign the Calling Plan service number to '$Upn' in Teams admin cent
 `# 5) Assign Direct Routing service number
 Set-CsPhoneNumberAssignment -Identity $Upn -PhoneNumber $Phone -PhoneNumberType DirectRouting
 
-# 6) Grant voice routing policy (required for outbound consult/transfer)
-${drPolicy ? `Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "${escapePs(drPolicy)}"` : `# Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "<your DR policy name>"`}`;
+# 6) Grant voice routing policy (required for outbound consult/transfer; blank or "Global (Org-wide default)" is not a real policy, so we pass $null = tenant default)
+${(!drPolicy || /^\s*global\b|org-?wide/i.test(drPolicy)) ? 'Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName $null   # global (org-wide default)' : `Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "${escapePs(drPolicy)}"`}`;
   } else {
     assignBlock =
 `# 5) Assign Operator Connect number
