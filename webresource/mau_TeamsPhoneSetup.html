@@ -401,16 +401,18 @@ function validateAll(){
   return ok;
 }
 
-function bindInput(id, key){
+function bindInput(id, key, transform){
   const el = document.getElementById('f_'+id);
   el.value = state[key] || '';
   el.addEventListener('input', () => {
-    state[key] = el.value.trim();
+    state[key] = transform ? transform(el.value) : el.value.trim();
     const a = document.getElementById('auto_'+id); if(a) a.textContent = '';
     persist(); refreshFromState();
   });
 }
-['display','upn','phone','acs','appId'].forEach(k => bindInput(k,k));
+['upn','acs','appId'].forEach(k => bindInput(k,k));
+bindInput('display','display', v => v);
+bindInput('phone','phone', v => v.replace(/[\s-]/g,''));
 const drIn = document.getElementById('f_drPolicy');
 drIn.value = state.drPolicy || '';
 drIn.addEventListener('input', ()=> { state.drPolicy = drIn.value.trim(); persist(); refreshFromState(); });
