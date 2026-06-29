@@ -7,7 +7,7 @@ param(
   # different names/prefixes — nothing here is tied to a specific tenant.
   [string]$SolutionUniqueName = 'mauTeamsPhoneSetup',
   [string]$SolutionFriendlyName = 'Teams Phone for D365 Contact Center',
-  [string]$SolutionVersion = '1.0.0.0',
+  [string]$SolutionVersion = '1.0.4.0',
   [string]$SolutionDescription = 'Self-serve wizard that brings a Teams Phone number into the D365 Contact Center voice channel. Generates an idempotent PowerShell onboarding script (Teams + Microsoft Graph) and links to the relevant admin portals.',
 
   [string]$PublisherUniqueName = 'mauPublisher',

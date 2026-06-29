@@ -437,19 +437,19 @@ function buildPs(){
   let assignBlock;
   if(pstn === 'CallingPlan'){
     assignBlock =
-`# 5) Calling Plan service numbers — assign in Teams admin center UI.
+`# 8) Calling Plan service numbers — assign in Teams admin center UI.
 #    https://admin.teams.microsoft.com/company-wide-settings/resource-accounts
 Write-Host "Assign the Calling Plan service number to '$Upn' in Teams admin center, then continue." -ForegroundColor Yellow`;
   } else if(pstn === 'DirectRouting'){
     assignBlock =
-`# 5) Assign Direct Routing service number
+`# 8) Assign Direct Routing service number
 Set-CsPhoneNumberAssignment -Identity $Upn -PhoneNumber $Phone -PhoneNumberType DirectRouting
 
-# 6) Grant voice routing policy (required for outbound consult/transfer; blank or "Global (Org-wide default)" is not a real policy, so we pass $null = tenant default)
+# 9) Grant voice routing policy (required for outbound consult/transfer; blank or "Global (Org-wide default)" is not a real policy, so we pass $null = tenant default)
 ${(!drPolicy || /^\s*global\b|org-?wide/i.test(drPolicy)) ? 'Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName $null   # global (org-wide default)' : `Grant-CsOnlineVoiceRoutingPolicy -Identity $Upn -PolicyName "${escapePs(drPolicy)}"`}`;
   } else {
     assignBlock =
-`# 5) Assign Operator Connect number
+`# 8) Assign Operator Connect number
 Set-CsPhoneNumberAssignment -Identity $Upn -PhoneNumber $Phone -PhoneNumberType OperatorConnect`;
   }
 
@@ -530,7 +530,7 @@ function Get-CountryNameFromIso {
 }
 
 # 1) Install/Import the modules we need
-foreach ($m in 'MicrosoftTeams','Microsoft.Graph.Applications','Microsoft.Graph.Identity.SignIns','Microsoft.Graph.Users') {
+foreach ($m in 'MicrosoftTeams','Microsoft.Graph.Applications','Microsoft.Graph.Identity.SignIns','Microsoft.Graph.Identity.DirectoryManagement','Microsoft.Graph.Users','Microsoft.Graph.Users.Actions') {
   if (-not (Get-Module -ListAvailable -Name $m)) {
     Write-Host "Installing $m ..." -ForegroundColor Cyan
     Install-Module $m -Scope CurrentUser -Force -AllowClobber
@@ -627,16 +627,42 @@ if ($Phone -match '^\\+[1-9]\\d{6,14}$') {
   }
 }
 
-# 6) Associate the Azure Communication Services resource and sync
-Set-CsOnlineApplicationInstance  -Identity $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId
-Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId
-Write-Host "ACS associated and synced." -ForegroundColor Green
+# 6) Set the application ID on the resource account and sync with Azure AD
+#    (ACS association is completed from the D365 side via 'Sync from Teams')
+Set-CsOnlineApplicationInstance  -Identity $ra.ObjectId -ApplicationId $AppId
+Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId
+Write-Host "Resource account application ID set and synced." -ForegroundColor Green
+
+# 7) Assign the free 'Microsoft Teams Phone Resource Account' (PHONESYSTEM_VIRTUALUSER)
+#    license. This is REQUIRED before a phone number can be assigned -- without it
+#    Set-CsPhoneNumberAssignment fails with "lacks appropriate licenses to assign a number".
+Write-Host ""
+Write-Host "Assigning 'Microsoft Teams Phone Resource Account' license ..." -ForegroundColor Cyan
+Connect-MgGraph -Scopes 'Organization.Read.All','User.ReadWrite.All' -NoWelcome | Out-Null
+$vuSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq 'PHONESYSTEM_VIRTUALUSER' } | Select-Object -First 1
+if (-not $vuSku) {
+  Write-Warning "'Microsoft Teams Phone Resource Account' (PHONESYSTEM_VIRTUALUSER) is not available in this tenant. Add it (free) in M365 admin center > Billing > Purchase services, then re-run this script."
+} elseif (($vuSku.PrepaidUnits.Enabled - $vuSku.ConsumedUnits) -le 0) {
+  Write-Warning "All 'Microsoft Teams Phone Resource Account' licenses are in use. Add more (free) in M365 admin center, then re-run this script."
+} else {
+  $u = Get-MgUser -UserId $Upn -Property AssignedLicenses,UsageLocation
+  if (-not $u.UsageLocation) { Update-MgUser -UserId $Upn -UsageLocation 'US' }
+  if ($u.AssignedLicenses.SkuId -contains $vuSku.SkuId) {
+    Write-Host "  License already assigned." -ForegroundColor DarkGray
+  } else {
+    Set-MgUserLicense -UserId $Upn -AddLicenses @(@{ SkuId = $vuSku.SkuId }) -RemoveLicenses @() | Out-Null
+    Write-Host "  License assigned. Waiting 30s for provisioning ..." -ForegroundColor Green
+    Start-Sleep -Seconds 30
+  }
+}
+Disconnect-MgGraph | Out-Null
 
 ${assignBlock}
 
 Write-Host ""
 Write-Host "=== Next steps ===" -ForegroundColor Magenta
-Write-Host "  - Assign 'Microsoft Teams Phone Resource Account' license (free) to $Upn in M365 admin center."
+Write-Host "  - If the license step above warned that none were available, add the free"
+Write-Host "    'Microsoft Teams Phone Resource Account' license in M365 admin center and re-run."
 Write-Host "  - In D365: Channels -> Phone numbers -> Advanced -> Teams phone system -> 'Sync from Teams'."
 Write-Host "  - Add the synced number to a voice workstream."
 `;
