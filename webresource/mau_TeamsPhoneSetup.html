@@ -628,9 +628,9 @@ if ($Phone -match '^\\+[1-9]\\d{6,14}$') {
 }
 
 # 6) Set the application ID on the resource account and sync with Azure AD
-#    (ACS association is completed from the D365 side via 'Sync from Teams')
+#    -AcsResourceId binds the account to your D365 ACS resource; without it D365's 'Sync from Teams' finds no numbers.
 Set-CsOnlineApplicationInstance  -Identity $ra.ObjectId -ApplicationId $AppId
-Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId
+Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId
 Write-Host "Resource account application ID set and synced." -ForegroundColor Green
 
 # 7) Assign the free 'Microsoft Teams Phone Resource Account' (PHONESYSTEM_VIRTUALUSER)
