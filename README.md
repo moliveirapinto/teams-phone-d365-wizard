@@ -35,6 +35,17 @@ You need the following **once per tenant**. None of this is created by the wizar
 | One free **Microsoft Teams Phone Resource Account** license | Needed to attach the phone number to the resource account. |
 | **PowerShell 5.1 or 7+** with access to PSGallery (or the `MicrosoftTeams` and `Microsoft.Graph.*` modules installed) | The generated script installs what it needs. If PSGallery is blocked by policy, install the modules from your internal feed first. |
 
+### What must exist in Teams first (Microsoft documentation)
+
+The wizard creates the resource account, license and binding for you, but the **phone number itself** has to be in your Teams tenant before you start. Read these first if you are new to Teams Phone:
+
+| Topic | Microsoft Learn |
+|---|---|
+| Get a **service phone number** for Teams (Calling Plan, Operator Connect or Direct Routing) | [Get service phone numbers](https://learn.microsoft.com/en-us/microsoftteams/getting-service-phone-numbers) |
+| What a **resource account** is, how to create one, and how to assign a phone number to it | [Manage resource accounts in Teams](https://learn.microsoft.com/en-us/microsoftteams/manage-resource-accounts) |
+| The free **Microsoft Teams Phone Resource Account** license | [Teams Phone Resource Account license](https://learn.microsoft.com/en-us/microsoftteams/teams-add-on-licensing/virtual-user) |
+| The official end-to-end flow this wizard automates | [Configure Teams Phone in the voice channel (Dynamics 365 Contact Center)](https://learn.microsoft.com/en-us/dynamics365/contact-center/administer/configure-teams-phone-in-voice-channel) |
+
 ---
 
 ## Install the wizard (5 minutes, one time)
