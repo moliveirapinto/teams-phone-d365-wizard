@@ -19,7 +19,7 @@ Wiring a Teams phone number into the D365 Voice channel officially involves:
 - four different admin portals,
 - and three GUIDs that nobody remembers.
 
-This wizard collapses all of that into **one screen**. It auto-detects everything it can, asks you only for the things it genuinely cannot guess, and generates a ready-to-paste PowerShell script for your Teams admin.
+This wizard collapses all of that into **one screen**. It auto-detects the ACS resource ID, Dynamics App ID and voice-channel status from your environment, asks you only for your phone number(s), generates one self-verifying PowerShell script for your Teams admin, then runs the D365 sync and checks the result for you.
 
 ---
 
@@ -33,7 +33,7 @@ You need the following **once per tenant**. None of this is created by the wizar
 | A Teams **service number** (usage: **Voice app**) | The wizard does **not** order phone numbers. They must already exist in your Teams tenant. User (DID) numbers are not supported. A Calling Plan service number with *Voice app* usage works with no call queue or auto attendant (verified). → [Get service numbers for Teams](https://learn.microsoft.com/microsoftteams/getting-service-phone-numbers) |
 | **Teams Administrator** + **Global Administrator** in your Microsoft 365 tenant | Needed to register the app and run the onboarding script. Use the *tenant's own* admin account, not a guest or your home-tenant account. |
 | One free **Microsoft Teams Phone Resource Account** license | Needed to attach the phone number to the resource account. |
-| **PowerShell 7+** with the `MicrosoftTeams` module (and Microsoft Graph modules, or access to PSGallery) | The generated script installs what it needs. If PSGallery is blocked by policy, install the modules from your internal feed first. |
+| **PowerShell 5.1 or 7+** with access to PSGallery (or the `MicrosoftTeams` and `Microsoft.Graph.*` modules installed) | The generated script installs what it needs. If PSGallery is blocked by policy, install the modules from your internal feed first. |
 
 ---
 
@@ -86,56 +86,50 @@ Replace `<your-org>` with whatever appears in your D365 URL (for example, `conto
 
 ## Use the wizard
 
-When the page loads it auto-fills almost everything. You will be asked for:
+The page checks your D365 environment on load, so there is nothing to copy from other screens. You type **only your phone number(s)**.
 
-1. **A friendly display name** for the resource account (anything — e.g. "Sales Hotline").
-2. **An email address** for the resource account (e.g. `saleshotline@yourcompany.com` — the wizard creates the user for you).
-3. **The Teams phone number** you already have provisioned in Teams (in `+E.164` format, e.g. `+15551234567`).
+### What it detects for you (read-only, live from Dataverse)
 
-The wizard then walks you through five short steps in order:
+| Check | Source |
+|---|---|
+| Voice channel with Teams Phone System provisioned | Active `msdyn_occommunicationprovidersettings` row, provider *Teams Phone System* |
+| **Azure Communication Services resource ID** | The same active provider row (`immutableid`) |
+| **Dynamics App ID** | `msdyn_occommunicationprovidersettingentries` where key = `DynamicsAppId` |
+| Numbers already imported / already attached to a workstream | `msdyn_ocphonenumbers`, `msdyn_ocvoicechannelsettings` |
 
-1. **Enter values** — fill the form, click **Generate script**.
-2. **Run PowerShell** — your Teams admin clicks **Copy script** or **Download .ps1**, runs it once in a PowerShell window. It installs everything, signs in, creates the resource account, binds Teams, and assigns the number.
-3. **Assign license** — opens the M365 Admin Center pre-filtered to the new account so you can attach the free Teams Phone Resource Account license in two clicks.
-4. **Sync from Teams in D365** — deep-links to **Customer Service workspace → Admin Center → Channels → Phone numbers → Advanced → Teams phone system** so D365 can pull the number it just created.
-5. **Attach to workstream** — opens the workstream/queue editor where you point the new number at an existing voice queue.
+If anything cannot be detected, an *Advanced: override* box opens so you can paste the value manually.
 
-### Calling Plan numbers: assign the number from the Phone numbers page
+### The four steps
 
-For Calling Plan numbers the script deliberately does **not** assign the number. Do it here:
+1. **Add your numbers** — one row per number (display name, phone number, resource-account email which is suggested for you). Pick the number type (Calling Plan, Operator Connect or Direct Routing). Add as many numbers as you need.
+2. **Run the script once** — **Copy script** or **Download .ps1**, run it in PowerShell 5.1 or 7+ as a Teams Administrator + Global/Application Administrator. It:
+   - installs missing modules (with a clear message if PSGallery is blocked),
+   - signs in with **device code** by default (works in InPrivate or remote sessions),
+   - creates the Entra app + admin consent for *Sync from Teams* (idempotent),
+   - creates each resource account, sets usage location, assigns the free license, **binds it to the Dynamics app *and* the ACS resource** (`-AcsResourceId`), retrying until it sticks,
+   - assigns the number (Calling Plan, Operator Connect or Direct Routing; if Teams refuses it prints the exact admin-center clicks),
+   - **re-reads everything from Teams and prints a PASS/FAIL table**. Come back to the wizard only when it says **ALL CHECKS PASSED**. The script is safe to re-run.
+3. **Sync & verify** — click **Sync now & wait for my numbers**. The wizard calls D365's own *Sync from Teams* action, then re-checks until each number appears, retrying for up to ~10 minutes (Teams → D365 is not instant). A table shows each number as *imported* and *attached*.
+4. **Attach to a voice workstream** — in D365, Customer support → Workstreams. The wizard flips the number to **attached** when done.
 
-**Teams admin center → Voice → Phone numbers →** select the number **→ Edit → Assigned to: Resource account →** search your account **→ Add → Apply**.
+> Calling Plan numbers: the script tries `Set-CsPhoneNumberAssignment` first. If your tenant refuses, assign the number from **Teams admin center → Voice → Phone numbers →** select the number **→ Edit → Assigned to: Resource account**, then click Sync again. (The *Assign a phone number* button on the resource account's own page opens a panel whose type dropdown is disabled.)
 
-> ⚠️ The **Assign a phone number** button on the resource account's own page opens a panel whose *Phone number type* dropdown is disabled. Use the Phone numbers page instead.
+> ⚠️ Resource account type shows **Other** in Teams admin. That is correct. **Never** change it to *Call queue* or *Auto attendant* in the Teams UI: it swaps the account's `ApplicationId` to the Call Queue app (`11cd3e2e-…`) and breaks the D365 binding. Re-running the script repairs it.
 
-### Before you click Sync: verify the Teams side
-
-Sign in to Teams PowerShell (`Connect-MicrosoftTeams`; add `-UseDeviceAuthentication` for a clean or InPrivate browser session) and check:
+### Manual verification (optional)
 
 ```powershell
+Connect-MicrosoftTeams -UseDeviceAuthentication
 Get-CsOnlineApplicationInstance -Identity <resource-account-upn> | fl AcsResourceId,ApplicationId,PhoneNumber
 ```
 
-| Field | Must be |
-|---|---|
-| `ApplicationId` | The **Dynamics App ID** shown in D365 (Channels → Phone numbers → Advanced → Teams phone system). **Not** `11cd3e2e-fccb-42ad-ad00-878b93575e07` (that is the Call Queue app). |
-| `AcsResourceId` | The **Azure Communication Services resource ID** from the same D365 page. If it shows `ACS_Resource_ID_Not_Set`, D365 cannot see the account. |
-| `PhoneNumber` | `tel:+<your number>` |
-
-If either ID is wrong, fix it:
-
-```powershell
-$ra = Get-CsOnlineApplicationInstance -Identity <resource-account-upn>
-Set-CsOnlineApplicationInstance  -Identity  $ra.ObjectId -ApplicationId <DynamicsAppId>
-Sync-CsOnlineApplicationInstance -ObjectId  $ra.ObjectId -ApplicationId <DynamicsAppId> -AcsResourceId <AcsResourceId>
-```
+`ApplicationId` must equal the Dynamics App ID (never `11cd3e2e-…`), `AcsResourceId` must equal the ACS resource ID (not `ACS_Resource_ID_Not_Set`), and `PhoneNumber` must be `tel:+<your number>`.
 
 ### How you know it worked
 
-After **Sync from Teams** (allow up to ~5 minutes, then refresh), the number appears under **Channels → Phone numbers** with *Type: Teams* and *Status: Ready for setup*. Then attach it to a voice workstream.
+The number appears under **Channels → Phone numbers** with *Type: Teams* and *Status: Ready for setup*, and the wizard's table shows **imported**.
 
 ---
-
 ## Updating to a new version
 
 
@@ -161,9 +155,9 @@ When a new release is published:
 |---|---|
 | Wizard page shows **"Voice channel not detected"** | The Voice channel has not been provisioned in this environment yet. Use the link the wizard shows to open the Customer Service workspace and complete voice setup first. |
 | PowerShell script fails with **"insufficient privileges"** | The person running the script is not a Teams Administrator + Global Administrator. Have the right person re-run it. |
-| `New-CsOnlineApplicationInstance: ... license required` | The resource account is missing the Teams Phone Resource Account license. Go back to **Step 3** of the wizard and assign it, then re-run the script. |
-| The number does not appear in D365 after the script succeeds | Wait 1–2 minutes, then click **Step 4 — Sync from Teams in D365** in the wizard. Teams → D365 sync is not instant; in testing it took a few minutes after the Teams side was fixed. Refresh the Phone numbers page. |
-| Sync says **"No new phone numbers were found in Teams Admin Center to sync"** | This message is generic. It also appears when D365 cannot match the account. Run the *verify the Teams side* check above: the usual causes are a wrong `ApplicationId` or `AcsResourceId` = `ACS_Resource_ID_Not_Set`. Fix with `Set-` / `Sync-CsOnlineApplicationInstance ... -AcsResourceId`, wait a few minutes, sync again. |
+| `New-CsOnlineApplicationInstance: ... license required` | The resource account is missing the Teams Phone Resource Account license. Add the (free) license in M365 admin center > Billing > Purchase services if the tenant has none, then re-run the script. It assigns the license for you. |
+| The number does not appear in D365 after the script succeeds | Use the wizard's **Step 3 — Sync now & wait for my numbers**: it retries for ~10 minutes. Teams → D365 sync is not instant; in testing it took a few minutes after the Teams side was fixed. |
+| Sync says **"No new phone numbers were found in Teams Admin Center to sync"** | This message is generic. It also appears when D365 cannot match the account. Re-run the script (it verifies and repairs the binding) or run the *Manual verification* above: the usual causes are a wrong `ApplicationId` or `AcsResourceId` = `ACS_Resource_ID_Not_Set`. Fix with `Set-` / `Sync-CsOnlineApplicationInstance ... -AcsResourceId`, wait a few minutes, sync again. |
 | Sync response is `TotalTeamsNumbers: null` (browser dev tools, `CCaaS_SynchronizePhoneNumbers`) | Same root cause as above: D365 found no Teams numbers bound to the ACS resource. |
 | **Resource account type** shows **Other** in Teams admin | That is expected for an account bound to the Dynamics app. **Do not** change it to *Call queue* or *Auto attendant* in the Teams UI: it swaps the account's `ApplicationId` to the Call Queue app and breaks the D365 binding. If that already happened, re-run the `Set-` / `Sync-CsOnlineApplicationInstance` commands above. |
 | Call queue picker shows **"No results"** for the resource account | Same reason: the account is bound to the Dynamics app, not the Call Queue app. You do not need a call queue for this flow. |
@@ -192,6 +186,7 @@ webresource/
 dist/                           # the built solution zips that go on Releases
 docs/                           # README assets
 
+tests/                          # mock Dataverse server + smoke test
 upload.ps1                      # publish the HTML + PNG into a Dataverse env
 create-solution.ps1             # repack the solution and export new zips into dist/
 ```
@@ -202,6 +197,16 @@ Both helper scripts are tenant-agnostic — they take `-OrgUrl` and use `az acco
 az login --tenant <your-tenant>
 .\upload.ps1          -OrgUrl https://<your-org>.crm.dynamics.com
 .\create-solution.ps1 -OrgUrl https://<your-org>.crm.dynamics.com -Export
+```
+
+### Test without a D365 environment
+
+`tests/` has a mock of the Dataverse endpoints the wizard reads and a smoke test (auto-detection, script generation + PowerShell syntax check, in-wizard sync flow):
+
+```powershell
+npm i playwright-core
+Start-Process node tests/mock-d365-server.js   # http://127.0.0.1:8765
+node tests/smoke.js
 ```
 
 ---

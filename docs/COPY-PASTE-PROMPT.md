@@ -43,7 +43,8 @@ Open the D365 environment, sign in as the same admin, and go to the Copilot Serv
 - **Azure Communication Services resource ID** (a GUID) - call it ACS_ID
 - **Dynamics App ID** (a GUID) - call it APP_ID
 If the page shows "Resource running successfully" you are fine. If the Voice channel is not provisioned, stop and tell the user to complete voice setup first.
-Optional cross-check: the ACS_ID should equal `msdyn_occommunicationproviderimmutableid` of the ACTIVE row (statecode 0) in `msdyn_occommunicationprovidersettings` where `msdyn_occommunicationprovider eq 192350003` (Teams Phone System). Do NOT use the row with provider 192350000 (that can be an old trial ACS and gives the wrong ID).
+FASTER (preferred when you have a browser session on the D365 org): read both from the Dataverse Web API instead of the UI: ACS_ID = `msdyn_occommunicationproviderimmutableid` of the active row in `msdyn_occommunicationprovidersettings?$filter=msdyn_occommunicationprovider eq 192350003 and statecode eq 0`; APP_ID = `msdyn_value` from `msdyn_occommunicationprovidersettingentries?$filter=msdyn_key eq 'DynamicsAppId' and statecode eq 0`.
+Cross-check: the ACS_ID should equal `msdyn_occommunicationproviderimmutableid` of the ACTIVE row (statecode 0) in `msdyn_occommunicationprovidersettings` where `msdyn_occommunicationprovider eq 192350003` (Teams Phone System). Do NOT use the row with provider 192350000 (that can be an old trial ACS and gives the wrong ID).
 Show ACS_ID and APP_ID to the user in one line each and move on.
 
 # STEP 3 - ENTRA APP FOR "SYNC FROM TEAMS" (change - confirm first)
