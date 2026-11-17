@@ -6,6 +6,8 @@ You install it once, open it from inside D365, fill in two boxes, and the wizard
 
 ![Wizard screenshot](docs/01image.png)
 
+> **Prefer not to install anything?** Skip the HTML wizard and paste [**docs/COPY-PASTE-PROMPT.md**](docs/COPY-PASTE-PROMPT.md) into Microsoft Scout, GitHub Copilot CLI, Claude or any tool-capable LLM. It interviews you, then does the whole setup (Entra app, resource account, license, binding, number assignment, D365 sync and verification) for you. You just paste, answer questions and approve sign-ins.
+
 ---
 
 ## Why this exists
