@@ -4,7 +4,7 @@ A friendly, point-and-click setup wizard that brings a **Teams Phone** number in
 
 You install it once, open it from inside D365, fill in two boxes, and the wizard does the rest.
 
-![Wizard screenshot](docs/01image.png)
+![Wizard screenshot](docs/wizard-screenshot.png)
 
 > **Prefer not to install anything?** Skip the HTML wizard and paste [**docs/COPY-PASTE-PROMPT.md**](docs/COPY-PASTE-PROMPT.md) into Microsoft Scout, GitHub Copilot CLI, Claude or any tool-capable LLM. It interviews you, then does the whole setup (Entra app, resource account, license, binding, number assignment, D365 sync and verification) for you. You just paste, answer questions and approve sign-ins.
 
