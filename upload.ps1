@@ -61,5 +61,5 @@ $url = "$base/WebResources/mau_TeamsPhoneSetup.html"
 Write-Host ""
 Write-Host "Web resource URL:" -ForegroundColor Magenta
 Write-Host "  $url"
-$url | Set-Clipboard
-Write-Host "(URL copied to clipboard)" -ForegroundColor DarkGray
+# The clipboard is not available on build agents or some remote sessions: never fail on it.
+try { $url | Set-Clipboard; Write-Host "(URL copied to clipboard)" -ForegroundColor DarkGray } catch { }
