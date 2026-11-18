@@ -1,0 +1,54 @@
+name: Release solution
+
+# Manual. Publishes the web resources to a build environment, exports the managed and
+# unmanaged solution zips and attaches them to a new GitHub release.
+# One-time setup: README > For contributors > Automated releases.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Solution version, four parts (e.g. 1.0.5.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      DATAVERSE_URL: ${{ secrets.DATAVERSE_URL }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate version
+        shell: pwsh
+        run: if ($env:VERSION -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Version must look like 1.0.5.0' }
+
+      - name: Sign in to Azure (OIDC, no stored secret)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Publish web resources to the build environment
+        shell: pwsh
+        run: ./upload.ps1
+
+      - name: Pack and export the solution
+        shell: pwsh
+        run: ./create-solution.ps1 -SolutionVersion $env:VERSION -Export
+
+      - name: Create the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag   = 'v' + ($env:VERSION -replace '\.0$','')
+          $files = @(Get-ChildItem dist -Filter ('*_{0}*.zip' -f ($env:VERSION -replace '\.','_')) | ForEach-Object FullName)
+          if ($files.Count -eq 0) { throw 'No solution zips were exported.' }
+          gh release create $tag @files --title "$tag Teams Phone for D365 Contact Center" --generate-notes
