@@ -4,7 +4,7 @@ A friendly, point-and-click setup wizard that brings a **Teams Phone** number in
 
 You install it once, open it from inside D365, type your phone number, run one script, and the wizard does the rest: it syncs, verifies and tells you when the number is attached to a workstream.
 
-![Wizard screenshot](docs/wizard-screenshot.png)
+![Wizard v1.0.5 after a completed run: environment detected, number imported and attached to two workstreams](docs/wizard-screenshot.png)
 
 > **Prefer not to install anything?** Skip the HTML wizard and paste [**docs/COPY-PASTE-PROMPT.md**](docs/COPY-PASTE-PROMPT.md) into Microsoft Scout, GitHub Copilot CLI, Claude or any tool-capable LLM. It interviews you, then does the whole setup (Entra app, resource account, license, binding, number assignment, D365 sync and verification) for you. You just paste, answer questions and approve sign-ins.
 
@@ -120,14 +120,16 @@ The page checks your D365 environment on load, so there is nothing to copy from 
 | Voice channel with Teams Phone System provisioned | Active `msdyn_occommunicationprovidersettings` row, provider *Teams Phone System* |
 | **Azure Communication Services resource ID** | The same active provider row (`immutableid`) |
 | **Dynamics App ID** | `msdyn_occommunicationprovidersettingentries` where key = `DynamicsAppId`, linked to the active provider |
-| Numbers already imported / already attached to a workstream (with its name) | `msdyn_ocphonenumbers`, `msdyn_ocvoicechannelsettings` |
+| Numbers already imported / already attached to a workstream (with every workstream name) | `msdyn_ocphonenumbers`, `msdyn_ocvoicechannelsettings` |
 
 If anything cannot be detected (or the App ID entry is not linked to the active provider), an *Advanced: override* box opens so you can check or paste the value manually.
 
 ### The four steps
 
-1. **Add your numbers** — one row per number (display name, phone number, resource-account email which is suggested for you). Leave **Number type** on *Auto-detect*: the script reads each number's type and country from Teams. Pick *Direct Routing* only for a Direct Routing number that is not in the Teams number inventory yet. Add as many numbers as you need.
-2. **Run the script once** — **Copy script** or **Download .ps1**, run it in PowerShell 5.1 or 7+ as a Teams Administrator who can also assign licenses and grant admin consent. It:
+The progress bar at the top of the page shows the same four steps and turns each one green on its own.
+
+1. **Check environment & add numbers** — one row per number (display name, phone number, resource-account email which is suggested for you). Leave **Number type** on *Auto-detect*: the script reads each number's type and country from Teams. Pick *Direct Routing* only for a Direct Routing number that is not in the Teams number inventory yet. Add as many numbers as you need.
+2. **Run script (Teams)** — **Copy script** or **Download .ps1**, run it in PowerShell 5.1 or 7+ as a Teams Administrator who can also assign licenses and grant admin consent. It:
    - installs missing modules (with a clear message if PSGallery is blocked) and updates `MicrosoftTeams` if it is too old for `-AcsResourceId`,
    - signs in with **device code** by default (works in InPrivate or remote sessions),
    - creates the Entra app + admin consent for *Sync from Teams* (idempotent),
@@ -137,8 +139,8 @@ If anything cannot be detected (or the App ID entry is not linked to the active 
    - **re-reads everything from Teams and prints a PASS/FAIL table**, and saves a log plus a JSON result in your temp folder.
 
    Options: `-CheckOnly` shows every change it would make and changes nothing; `-ListNumbers` lists the free service numbers you can use. The script is safe to re-run.
-3. **Sync & verify — automatic.** As soon as you copy or download the script, the wizard calls D365's own *Sync from Teams* every 2 minutes (up to 30 minutes) and re-checks until each number appears. Coming back to the tab triggers an immediate sync. You can also click **Sync now & wait for my numbers**.
-4. **Attach to a voice workstream** — click **Open Workstreams in D365**, open (or create) a voice workstream, add the *Voice* channel and pick the number. The wizard notices on its own and shows **attached** with the workstream name.
+3. **Sync & verify (automatic).** As soon as you copy or download the script, the wizard calls D365's own *Sync from Teams* every 2 minutes (up to 30 minutes) and re-checks until each number appears. Coming back to the tab triggers an immediate sync. You can also click **Sync now & wait for my numbers**.
+4. **Attach to workstream** — click **Open Workstreams in D365**, open (or create) a voice workstream, add the *Voice* channel and pick the number. The wizard notices on its own and shows **attached** with the workstream name (all of them if the number is on several), then **Setup complete**.
 
 > Calling Plan numbers: the script tries `Set-CsPhoneNumberAssignment` first. If your tenant refuses, assign the number from **Teams admin center → Voice → Phone numbers →** select the number **→ Edit → Assigned to: Resource account**, then click Sync again. (The *Assign a phone number* button on the resource account's own page opens a panel whose type dropdown is disabled.)
 
@@ -155,7 +157,7 @@ Get-CsOnlineApplicationInstance -Identity <resource-account-upn> | fl AcsResourc
 
 ### How you know it worked
 
-The number appears under **Channels → Phone numbers** with *Type: Teams* and *Status: Ready for setup*, and the wizard's table shows **imported** (then **attached** once it is on a workstream).
+The number appears under **Channels → Phone numbers** with *Type: Teams* and *Status: Ready for setup*, and the wizard's table shows **imported** (then **attached** once it is on a workstream). When every number is attached, all four steps turn green and the wizard shows **Setup complete**.
 
 ---
 ## Updating to a new version
@@ -181,7 +183,7 @@ When a new release is published:
 
 | Symptom | What to do |
 |---|---|
-| Wizard page shows **"Voice channel not detected"** | The Voice channel has not been provisioned in this environment yet. Use the link the wizard shows to open the Customer Service workspace and complete voice setup first. |
+| Wizard banner: **"Voice channel with Teams Phone System not detected in this environment"** | The Voice channel has not been provisioned in this environment yet. Provision it in the Customer Service admin center (**Channels → Phone numbers → Get started**), then reload the wizard. |
 | PowerShell script fails with **"insufficient privileges"** | The account running the script lacks a role it needs (Teams Administrator, license assignment or admin consent). A Global Administrator covers all of it. Have the right person re-run it. |
 | Script stops with **"MicrosoftTeams module … has no -AcsResourceId"** | The script has already installed the latest module. Close PowerShell, open a new window and run it again. |
 | **"not in this tenant's Teams phone number inventory"** or **"usage is not 'Voice app'"** | Use a service number with *Voice app* usage. Run the script with `-ListNumbers` to see the ones you can use. For a Direct Routing number, pick *Direct Routing* in the wizard and use the new script. |
@@ -189,12 +191,13 @@ When a new release is published:
 | `New-CsOnlineApplicationInstance: ... license required` | The resource account is missing the Teams Phone Resource Account license. Add the (free) license in M365 admin center > Billing > Purchase services if the tenant has none, then re-run the script. It assigns the license for you. |
 | The number does not appear in D365 after the script succeeds | Leave the wizard open: it keeps syncing for 30 minutes. Or click **Sync now & wait for my numbers** (retries for ~10 minutes). Teams → D365 sync is not instant; in testing it took a few minutes after the Teams side was fixed. |
 | Sync says **"No new phone numbers were found in Teams Admin Center to sync"** | This message is generic. It also appears when D365 cannot match the account. Re-run the script (it verifies and repairs the binding) or run the *Manual verification* above: the usual causes are a wrong `ApplicationId` or `AcsResourceId` = `ACS_Resource_ID_Not_Set`. Fix with `Set-` / `Sync-CsOnlineApplicationInstance ... -AcsResourceId`, wait a few minutes, sync again. |
-| Sync response is `TotalTeamsNumbers: null` (wizard log, or browser dev tools, `CCaaS_SynchronizePhoneNumbers`) | Same root cause as above: D365 found no Teams numbers bound to the ACS resource. |
-| **Copy script** does nothing | The browser blocked clipboard access inside D365. Use **Download .ps1**. |
+| Wizard log keeps showing `TotalTeamsNumbers = none yet` (browser dev tools: `TotalTeamsNumbers: null` on `CCaaS_SynchronizePhoneNumbers`) | Same root cause as above: D365 found no Teams numbers bound to the ACS resource. |
+| **Copy script** says *"Your browser blocked the clipboard here"* | The browser blocked clipboard access inside D365. Use **Download .ps1**. |
 | **Resource account type** shows **Other** in Teams admin | That is expected for an account bound to the Dynamics app. **Do not** change it to *Call queue* or *Auto attendant* in the Teams UI: it swaps the account's `ApplicationId` to the Call Queue app and breaks the D365 binding. If that already happened, re-run the script. |
 | Call queue picker shows **"No results"** for the resource account | Same reason: the account is bound to the Dynamics app, not the Call Queue app. You do not need a call queue for this flow. |
 | D365 banner: **"Some components of this app require you to sign in"** | Click **Sign in** once (it opens a short Power Apps auth popup; allow popups). It is not what blocks the sync, so continue even if the banner stays. |
 | Wizard banner: **"Your D365 session has expired"** | Reload the page. Everything you typed is kept. |
+| Wizard banner: **"Preview mode: not running inside a D365 environment"** | You opened the HTML file directly (or from localhost). Open it from your D365 URL (`https://<your-org>.crm.dynamics.com/WebResources/mau_TeamsPhoneSetup.html`) so it can read your environment. |
 | `Install-Module` fails: **"Unable to find repository 'PSGallery'"** | PSGallery is blocked or unregistered on this machine. Install the modules from your internal feed, or run the script from a machine that has PSGallery. |
 | **"You don't have access to the Teams admin center"** (`INVALID_PRIVILEGE`) right after sign-in | Usually a transient deep-link error. Open the Teams admin center dashboard first and navigate with the menu. If it persists, the account lacks the Teams Administrator role. |
 
