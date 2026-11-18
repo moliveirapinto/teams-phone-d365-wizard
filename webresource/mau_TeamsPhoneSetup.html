@@ -112,7 +112,8 @@
     </div>
     <div class="ctx">
       Signed in as <strong id="ctxUser">&mdash;</strong><br>
-      Tenant: <strong id="ctxTenant">&mdash;</strong>
+      Tenant: <strong id="ctxTenant">&mdash;</strong><br>
+      <span id="ver"></span>
     </div>
   </div>
 
@@ -146,7 +147,7 @@
       <div>
         <div class="field">
           <label>Azure Communication Services resource ID <span class="auto" id="auto_acs"></span></label>
-          <input id="f_acs" type="text" placeholder="GUID or /subscriptions/.../communicationServices/{name}" />
+          <input id="f_acs" type="text" placeholder="GUID" />
           <div class="help">Auto-detected from the active <em>Teams Phone System</em> provider. Only edit if detection failed. Manual location: <strong>Admin Center &rarr; Channels &rarr; Phone numbers &rarr; Get started &rarr; Teams phone system</strong>.
             <a class="example" href="mau_teamsphone_example.png" target="_blank" title="Open full-size">
               <img src="mau_teamsphone_example.png" alt="Manage telephony, Teams phone system tab" />
@@ -177,9 +178,10 @@
       <div class="divider"></div>
 
       <h2 style="margin-top:6px">Number type</h2>
-      <p class="lead">How are these numbers provided to Teams?</p>
+      <p class="lead">Leave this on Auto-detect: the script reads each number&rsquo;s type and country from Teams.</p>
       <div class="tabs" id="pstnTabs">
-        <button class="tab active" data-pstn="CallingPlan" type="button">Calling Plan</button>
+        <button class="tab active" data-pstn="Auto" type="button">Auto-detect</button>
+        <button class="tab" data-pstn="CallingPlan" type="button">Calling Plan</button>
         <button class="tab" data-pstn="OperatorConnect" type="button">Operator Connect</button>
         <button class="tab" data-pstn="DirectRouting" type="button">Direct Routing</button>
       </div>
@@ -188,13 +190,13 @@
       <div class="field" id="drPolicyWrap" style="display:none;margin-top:12px">
         <label>Direct Routing voice routing policy <span class="opt">(optional)</span></label>
         <input id="f_drPolicy" type="text" placeholder="MyVoiceRoutingPolicy" />
-        <div class="help">Name of an existing voice routing policy. Leave blank for the tenant default. Do <strong>not</strong> type "Global (Org-wide default)", that is a label, not a policy name.</div>
+        <div class="help">Name of an existing voice routing policy. Used only for Direct Routing numbers. Leave blank for the tenant default. Do <strong>not</strong> type "Global (Org-wide default)", that is a label, not a policy name.</div>
       </div>
     </div>
 
     <div class="card">
       <h2>Step 2 &mdash; Run this once in PowerShell</h2>
-      <p class="lead">Run as a Teams Administrator + Global (or Application) Administrator. Safe to re-run: it only changes what is missing, then proves the result.</p>
+      <p class="lead">Run as a Teams Administrator who can also assign licenses and grant admin consent (a Global Administrator covers all of it). Safe to re-run: it only changes what is missing, then proves the result.</p>
 
       <div class="opts">
         <label><input type="checkbox" id="o_device" checked> Device-code sign-in <span class="opt" style="color:var(--muted)">(works in any browser, InPrivate or remote)</span></label>
@@ -211,7 +213,11 @@
       <div class="ps" id="psBlock"></div>
       <div class="help" style="font-size:11.5px;color:var(--muted);margin-top:8px">
         Downloaded file blocked? Run <code>Unblock-File .\Onboard-TeamsPhone.ps1</code> or <code>powershell -ExecutionPolicy Bypass -File .\Onboard-TeamsPhone.ps1</code>.
-        The script ends with a PASS/FAIL table. Come back here only when it says <strong>ALL CHECKS PASSED</strong>.
+        The script ends with a PASS/FAIL table and saves a log and a JSON result in your temp folder.
+      </div>
+      <div class="help" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+        Options: <code>-CheckOnly</code> previews every change without making it &middot; <code>-ListNumbers</code> lists the free service numbers you can use.
+        Example: <code>.\Onboard-TeamsPhone.ps1 -CheckOnly</code>
       </div>
     </div>
 
@@ -219,12 +225,13 @@
 
   <div class="card" id="syncCard">
     <h2>Step 3 &mdash; Sync from Teams &amp; verify</h2>
-    <p class="lead">One click. The wizard asks D365 to import the numbers, then re-checks until each one appears (Teams &rarr; D365 can take a few minutes).</p>
+    <p class="lead">Nothing to click: once you copy or download the script, this page keeps asking D365 to sync from Teams until each number appears (Teams &rarr; D365 can take a few minutes). You can also sync manually.</p>
+    <div class="opts"><label><input type="checkbox" id="o_watch" checked> Auto-sync after I copy or download the script</label></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn primary" id="btnSync" type="button">Sync now &amp; wait for my numbers</button>
       <button class="btn" id="btnStopSync" type="button" style="display:none">Stop</button>
       <button class="btn" id="btnRefresh" type="button">Refresh status</button>
-      <a class="btn" id="lnkChannels" href="#" target="_blank">Open Phone numbers in D365 &nearr;</a>
+      <a class="btn" id="lnkChannels" href="#" target="_blank" rel="noopener">Open Phone numbers in D365 &nearr;</a>
     </div>
     <div class="log" id="syncLog">Waiting. Run the script above first, then click <strong>Sync now</strong>.</div>
     <table class="res" id="resTable" style="display:none">
@@ -236,7 +243,8 @@
 
   <div class="card" id="wsCard">
     <h2>Step 4 &mdash; Attach to a voice workstream</h2>
-    <p class="lead">Numbers are imported but not routed yet. In D365 open <strong>Customer support &rarr; Workstreams</strong>, open (or create) a voice workstream, add the <em>Voice</em> channel, and pick the number. The table above shows <span class="pill ok">attached</span> once done.</p>
+    <p class="lead">Numbers are imported but not routed yet. In D365 open <strong>Customer support &rarr; Workstreams</strong>, open (or create) a voice workstream, add the <em>Voice</em> channel, and pick the number. The table above switches to <span class="pill ok">attached</span> on its own once you save.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" id="lnkWorkstreams" href="#" target="_blank" rel="noopener">Open Workstreams in D365 &nearr;</a></div>
     <details>
       <summary>Troubleshooting</summary>
       <div>
@@ -247,6 +255,10 @@
           <tr><td>"Unable to find repository 'PSGallery'"</td><td>PSGallery is blocked or unregistered. Run <code>Register-PSRepository -Default</code>, or install <code>MicrosoftTeams</code> and <code>Microsoft.Graph.*</code> from your internal feed, then re-run.</td></tr>
           <tr><td>"You don't have access to the Teams admin center" (<code>INVALID_PRIVILEGE</code>)</td><td>Open the dashboard first and navigate with the menu. If it persists, the account lacks the Teams Administrator role.</td></tr>
           <tr><td>Automatic number assignment failed (Calling Plan)</td><td>Teams admin center &rarr; Voice &rarr; Phone numbers &rarr; select the number &rarr; Edit &rarr; <em>Assigned to: Resource account</em> &rarr; pick the account &rarr; Apply. Then run Sync again.</td></tr>
+          <tr><td>Script stops with &ldquo;MicrosoftTeams module &hellip; has no -AcsResourceId&rdquo;</td><td>The script has already updated the module. Close PowerShell, open a new window and run the script again.</td></tr>
+          <tr><td>&ldquo;not in this tenant&rsquo;s Teams phone number inventory&rdquo; or &ldquo;usage is not &lsquo;Voice app&rsquo;&rdquo;</td><td>Use a service number with <em>Voice app</em> usage. Run the script with <code>-ListNumbers</code> to see the ones you can use. For a Direct Routing number, pick <em>Direct Routing</em> above and use the new script.</td></tr>
+          <tr><td>&ldquo;has an assignment block&rdquo;</td><td>Remove it with <code>Remove-CsPhoneNumberAssignmentBlock</code> (or wait until it expires), then re-run.</td></tr>
+          <tr><td>Copy script does nothing</td><td>The browser blocked clipboard access inside D365. Use <strong>Download .ps1</strong>.</td></tr>
           <tr><td>License warning</td><td>Add the free <em>Microsoft Teams Phone Resource Account</em> license in M365 admin center &rarr; Billing &rarr; Purchase services, then re-run the script.</td></tr>
           <tr><td>Banner "Some components require you to sign in" in D365</td><td>Click <em>Sign in</em> once and allow the popup. It is not what blocks the sync.</td></tr>
         </table>
@@ -262,12 +274,16 @@
 <script>
 "use strict";
 
+const WIZARD_VERSION = '1.0.5';
 const STORAGE_KEY = 'mau_teamsphone_setup_v4';
+const STATE_SCHEMA = 5;
 const CQ_APP_ID = '11cd3e2e-fccb-42ad-ad00-878b93575e07';
 const PROVIDER_TEAMS = 192350003;   // msdyn_occommunicationprovider: Microsoft Teams Phone System
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const UPN_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PSTN_TYPES = ['Auto','CallingPlan','OperatorConnect','DirectRouting'];
+const FORMATTED = 'OData.Community.Display.V1.FormattedValue';
 
 let xrmCtx = null;
 try { xrmCtx = (window.parent && window.parent.Xrm) ? window.parent.Xrm : (window.Xrm || null); } catch(e){}
@@ -287,16 +303,19 @@ let stored = {};
 try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){}
 const state = Object.assign({
   lines: [{display:'Contact Center Main Line', upn:'', phone:''}],
-  acs:'', appId:'', drPolicy:'', pstn:'CallingPlan',
-  device:true, entra:true, tenant:''
+  acs:'', appId:'', drPolicy:'', pstn:'Auto',
+  device:true, entra:true, tenant:'', autoWatch:true, scriptDone:false, scriptAt:0
 }, stored);
+if(state.schema !== STATE_SCHEMA){ state.pstn = 'Auto'; state.autoWatch = true; state.schema = STATE_SCHEMA; }
+if(!PSTN_TYPES.includes(state.pstn)) state.pstn = 'Auto';
 if(!Array.isArray(state.lines) || !state.lines.length) state.lines = [{display:'Contact Center Main Line', upn:'', phone:''}];
 function persist(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
-const env = { providerId:null, acsName:'', acsAuto:false, appAuto:false, voiceOk:false, syncedCount:null, checked:false };
-let scriptDone = false;
+const env = { providerId:null, acsName:'', acsAuto:false, appAuto:false, appNote:'', voiceOk:false, syncedCount:null, checked:false, numbers:[], attached:new Map() };
 
-function banner(kind, text){
+const shownBanners = new Set();
+function banner(kind, text, key){
+  if(key){ if(shownBanners.has(key)) return null; shownBanners.add(key); }
   const el = document.createElement('div');
   el.className = 'banner ' + kind;
   const ic = document.createElement('span'); ic.className='ic'; ic.textContent = {ok:'\u2713',warn:'!',err:'\u00d7',info:'i'}[kind]||'i';
@@ -308,13 +327,17 @@ function banner(kind, text){
 let toastT;
 function toast(msg, kind='ok'){
   const el = $('toast'); el.textContent = msg; el.className = 'toast show ' + kind;
-  clearTimeout(toastT); toastT = setTimeout(()=> el.classList.remove('show'), 2400);
+  clearTimeout(toastT); toastT = setTimeout(()=> el.classList.remove('show'), 2600);
 }
 
 async function dv(path, opts, ver){
-  const o = Object.assign({credentials:'include', headers:{Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0'}}, opts||{});
+  const o = Object.assign({credentials:'include'}, opts||{});
+  o.headers = Object.assign({Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0'}, (opts && opts.headers) || {});
   const r = await fetch(`${ORG_URL}/api/data/${ver||'v9.2'}/${path}`, o);
-  if(!r.ok){ const t = await r.text().catch(()=> ''); const e = new Error(`HTTP ${r.status}`); e.status=r.status; e.body=t; throw e; }
+  if(!r.ok){
+    if(r.status === 401) banner('err', 'Your D365 session has expired. Reload this page (what you typed is kept).', 'auth');
+    const t = await r.text().catch(()=> ''); const e = new Error(`HTTP ${r.status}`); e.status=r.status; e.body=t; throw e;
+  }
   return r.status === 204 ? null : r.json();
 }
 
@@ -367,16 +390,17 @@ async function detectEnvironment(){
     }
   }catch(e){ console.warn('provider probe failed', e); }
 
-  // 2) Dynamics App ID (provider setting entry)
+  // 2) Dynamics App ID: the entry linked to the active provider. An unlinked entry is used only if it is the only one.
   try{
     const j = await dv(`msdyn_occommunicationprovidersettingentries?$select=msdyn_value,_msdyn_communicationprovidersettingentid_value`
       + `&$filter=msdyn_key eq 'DynamicsAppId' and statecode eq 0`);
     const rows = j.value || [];
-    const row = rows.find(r => r._msdyn_communicationprovidersettingentid_value === env.providerId) || rows[0];
+    let row = rows.find(r => env.providerId && r._msdyn_communicationprovidersettingentid_value === env.providerId);
+    if(!row && rows.length === 1){ row = rows[0]; env.appNote = ' (not linked to the active provider: please confirm)'; }
     if(row && row.msdyn_value && !state.appManual){ state.appId = row.msdyn_value; env.appAuto = true; }
   }catch(e){ console.warn('app id probe failed', e); }
 
-  // 3) Already-synced numbers
+  // 3) Already-synced numbers and workstream attachments
   await loadSyncedNumbers();
 }
 
@@ -387,10 +411,35 @@ async function loadSyncedNumbers(){
     env.syncedCount = env.numbers.length;
   }catch(e){ env.numbers = []; env.syncedCount = null; }
   try{
-    const j = await dv(`msdyn_ocvoicechannelsettings?$select=_msdyn_phonenumberid_value,_msdyn_liveworkstreamid_value&$filter=statecode eq 0`);
-    env.attached = new Set((j.value||[]).filter(r=>r._msdyn_liveworkstreamid_value).map(r=>r._msdyn_phonenumberid_value));
-  }catch(e){ env.attached = new Set(); }
+    const j = await dv(`msdyn_ocvoicechannelsettings?$select=_msdyn_phonenumberid_value,_msdyn_liveworkstreamid_value&$filter=statecode eq 0`,
+      {headers:{Prefer:`odata.include-annotations="${FORMATTED}"`}});
+    const m = new Map();
+    // A number can sit on several workstreams (e.g. inbound + outbound): keep every name.
+    (j.value||[]).forEach(r => {
+      const id = r._msdyn_phonenumberid_value;
+      if(!id || !r._msdyn_liveworkstreamid_value) return;
+      const name = r[`_msdyn_liveworkstreamid_value@${FORMATTED}`] || 'workstream';
+      const names = m.get(id) ? m.get(id).split(', ') : [];
+      if(!names.includes(name)) names.push(name);
+      m.set(id, names.join(', '));
+    });
+    env.attached = m;
+  }catch(e){ env.attached = new Map(); }
 }
+
+/* D365 may store a number with spaces, dashes or without the country code: compare digits. */
+const digits = s => String(s||'').replace(/\D/g,'');
+function sameNumber(a, b){
+  const x = digits(a), y = digits(b);
+  if(!x || !y) return false;
+  if(x === y) return true;
+  const s = x.length < y.length ? x : y, l = x.length < y.length ? y : x;
+  return s.length >= 8 && l.endsWith(s);
+}
+function findNumber(phone){ return (env.numbers||[]).find(x => sameNumber(x.number, phone)); }
+function wantedNumbers(){ return state.lines.map(l => (l.phone||'').trim()).filter(Boolean); }
+function allPresent(){ const w = wantedNumbers(); return w.length > 0 && w.every(n => findNumber(n)); }
+function allAttached(){ const w = wantedNumbers(); return w.length > 0 && w.every(n => { const x = findNumber(n); return x && env.attached.has(x.id); }); }
 
 function renderChecks(){
   const box = $('checks'); box.innerHTML = '';
@@ -407,12 +456,12 @@ function renderChecks(){
       env.voiceOk ? (env.acsName || 'Active provider found') : 'Not found. Provision Voice in Customer Service admin center first.');
   add(GUID_RE.test(state.acs||'') ? 'ok':'bad', 'Azure Communication Services resource ID',
       state.acs ? state.acs + (env.acsAuto?'  (auto-detected)':'') : 'Not detected. Enter it under Advanced.');
-  add(GUID_RE.test(state.appId||'') ? 'ok':'bad', 'Dynamics App ID',
-      state.appId ? state.appId + (env.appAuto?'  (auto-detected)':'') : 'Not detected. Enter it under Advanced.');
+  add(GUID_RE.test(state.appId||'') ? (env.appNote ? 'wait' : 'ok') : 'bad', 'Dynamics App ID',
+      state.appId ? state.appId + (env.appAuto ? '  (auto-detected)' + env.appNote : '') : 'Not detected. Enter it under Advanced.');
   add(env.syncedCount === null ? 'wait' : 'ok', 'Numbers already in D365',
       env.syncedCount === null ? 'Could not read (permissions?)' : `${env.syncedCount} number(s) already imported`);
   const allDetected = env.voiceOk && GUID_RE.test(state.acs||'') && GUID_RE.test(state.appId||'');
-  if(!allDetected) $('overrideBox').open = true;
+  if(!allDetected || env.appNote) $('overrideBox').open = true;
 }
 
 /* ---------- lines UI ---------- */
@@ -435,10 +484,11 @@ function renderLines(){
     const g = document.createElement('div'); g.className = 'grid';
     const mk = (key, label, ph, type) => {
       const c = document.createElement('div');
-      const lb = document.createElement('label'); lb.textContent = label;
-      const inp = document.createElement('input'); inp.type = type||'text'; inp.placeholder = ph; inp.value = l[key]||'';
+      const id = `ln${i}_${key}`;
+      const lb = document.createElement('label'); lb.textContent = label; lb.htmlFor = id;
+      const inp = document.createElement('input'); inp.id = id; inp.type = type||'text'; inp.placeholder = ph; inp.value = l[key]||'';
       inp.addEventListener('input', () => {
-        l[key] = key==='phone' ? inp.value.replace(/[\s()-]/g,'') : inp.value.trim();
+        l[key] = key==='phone' ? inp.value.replace(/[\s().-]/g,'') : inp.value.trim();
         if(key==='display' && !l.upnTouched && state.tenant) { l.upn = `${slug(l.display)||'cc-mainline'}@${state.tenant}`; const up = g.querySelector('[data-k=upn]'); if(up) up.value = l.upn; }
         if(key==='upn') l.upnTouched = true;
         persist(); refresh(false);
@@ -459,15 +509,17 @@ $('btnAddLine').onclick = () => { state.lines.push({display:'', upn:'', phone:''
 
 function validateAll(showErrors){
   let ok = true;
+  const phones = state.lines.map(l => digits(l.phone));
+  const upns = state.lines.map(l => (l.upn||'').trim().toLowerCase());
   state.lines.forEach((l,i) => {
     const e = validLine(l);
+    if(phones[i] && phones.indexOf(phones[i]) !== i) e.dupPhone = 'Same number as another row';
+    if(upns[i] && upns.indexOf(upns[i]) !== i) e.dupUpn = 'Same resource account as another row (one account per number)';
     const msg = Object.values(e).join(' \u00b7 ');
     const el = document.querySelector(`[data-err="${i}"]`);
     if(el) el.textContent = showErrors ? msg : '';
     if(msg) ok = false;
   });
-  const dupe = new Set(state.lines.map(l => (l.phone||'').trim()).filter(Boolean));
-  if(dupe.size !== state.lines.filter(l=>l.phone).length){ ok = false; if(showErrors) toast('Duplicate phone numbers', 'err'); }
   if(!GUID_RE.test((state.acs||'').trim())){ ok = false; $('e_acs').textContent = 'Must be the ACS resource GUID'; $('f_acs').classList.add('invalid'); } else { $('e_acs').textContent=''; $('f_acs').classList.remove('invalid'); }
   if(!GUID_RE.test((state.appId||'').trim())){ ok = false; $('e_appId').textContent = 'Must be a GUID'; $('f_appId').classList.add('invalid'); } else { $('e_appId').textContent=''; $('f_appId').classList.remove('invalid'); }
   return ok;
@@ -476,42 +528,52 @@ function validateAll(showErrors){
 /* ---------- script generation ---------- */
 function escapePs(s){ return String(s||'').replace(/`/g,'``').replace(/"/g,'`"').replace(/\$/g,'`$'); }
 
-function buildPs(){
-  const appId = escapePs((state.appId||'<DYNAMICS_APP_ID>').trim());
-  const acsId = escapePs((state.acs||'<ACS_RESOURCE_ID>').trim());
-  const drPolicy = (!state.drPolicy || /^\s*global\b|org-?wide/i.test(state.drPolicy)) ? '' : escapePs(state.drPolicy);
-  const lines = state.lines.map(l =>
-    `  @{ Display = "${escapePs(l.display||'<DisplayName>')}"; Upn = "${escapePs((l.upn||'<UPN>').trim())}"; Phone = "${escapePs((l.phone||'<+E164>').trim())}" }`
-  ).join('\n');
-
-  return `#Requires -Version 5.1
+const PS_TEMPLATE = String.raw`#Requires -Version 5.1
 <#
-  Teams Phone -> D365 Contact Center onboarding   (generated by the wizard)
-  Run as a Teams Administrator + Global (or Application) Administrator.
+  Teams Phone -> D365 Contact Center onboarding   (generated by the wizard v__VERSION__)
+  Run as a Teams Administrator who can also assign licenses and grant admin consent
+  (a Global Administrator covers all of it).
   Safe to re-run: every step checks first and only changes what is missing.
-  Downloaded file blocked?  Unblock-File .\\Onboard-TeamsPhone.ps1
-                       or:  powershell -ExecutionPolicy Bypass -File .\\Onboard-TeamsPhone.ps1
+
+  Options
+    -CheckOnly    Read-only preflight. Shows every change it would make and changes nothing.
+    -ListNumbers  Lists the free service numbers you can assign to a resource account, then exits.
+
+  Downloaded file blocked?  Unblock-File .\Onboard-TeamsPhone.ps1
+                       or:  powershell -ExecutionPolicy Bypass -File .\Onboard-TeamsPhone.ps1
 #>
-[CmdletBinding()] param()
+[CmdletBinding()]
+param(
+  [switch]$CheckOnly,
+  [switch]$ListNumbers
+)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 1.0
 
-$AppId          = "${appId}"        # Dynamics application id (from D365)
-$AcsId          = "${acsId}"        # Azure Communication Services resource id (from D365)
-$PstnType       = "${state.pstn}"
-$DrPolicy       = "${drPolicy}"
-$UseDeviceCode  = $${state.device ? 'true' : 'false'}
-$CreateEntraApp = $${state.entra ? 'true' : 'false'}
+$AppId          = "__APP_ID__"        # Dynamics application id (from D365)
+$AcsId          = "__ACS_ID__"        # Azure Communication Services resource id (from D365)
+$PstnType       = "__PSTN__"        # Auto = read each number's type and country from Teams
+$DrPolicy       = "__DR_POLICY__"
+$UseDeviceCode  = __DEVICE__
+$CreateEntraApp = __ENTRA__
 $Lines = @(
-${lines}
+__LINES__
 )
 $CallQueueAppId = '11cd3e2e-fccb-42ad-ad00-878b93575e07'   # must NEVER be the resource account's ApplicationId
+$SyncAppName    = 'D365 Contact Center - Teams Phone Sync'
+$SyncAppTag     = 'mau-teamsphone-sync'
 
 $script:Failures = New-Object System.Collections.ArrayList
+$script:Planned  = New-Object System.Collections.ArrayList
 function Write-Step($t) { Write-Host ""; Write-Host "== $t" -ForegroundColor Cyan }
 function Write-Ok($t)   { Write-Host "  OK  $t" -ForegroundColor Green }
 function Write-Warn2($t){ Write-Host "  !!  $t" -ForegroundColor Yellow }
 function Add-Failure($t){ [void]$script:Failures.Add($t); Write-Host "  XX  $t" -ForegroundColor Red }
+# Every change goes through here: in -CheckOnly mode it is only recorded and reported.
+function Test-ShouldApply([string]$What) {
+  if ($CheckOnly) { [void]$script:Planned.Add($What); Write-Host "  ..  WOULD $What" -ForegroundColor DarkYellow; return $false }
+  return $true
+}
 function Wait-Until([scriptblock]$Test, [int]$TimeoutSec = 180, [int]$IntervalSec = 10, [string]$What = 'condition') {
   $sw = [Diagnostics.Stopwatch]::StartNew()
   while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
@@ -521,121 +583,215 @@ function Wait-Until([scriptblock]$Test, [int]$TimeoutSec = 180, [int]$IntervalSe
   Write-Warn2 "Timed out waiting for $What"
   return $false
 }
-function Ensure-Module([string]$Name) {
+function Install-IfMissing([string]$Name) {
   if (Get-Module -ListAvailable -Name $Name) { return }
   Write-Host "  Installing $Name ..." -ForegroundColor DarkGray
   try { Install-Module $Name -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop }
   catch { throw "Cannot install module '$Name': $($_.Exception.Message)  If PSGallery is blocked run 'Register-PSRepository -Default' (or install from your internal feed) and re-run." }
 }
+function Get-ResourceAccount([string]$Upn) {
+  try { Get-CsOnlineApplicationInstance -Identity $Upn -ErrorAction Stop } catch { $null }
+}
+function Get-NumberInfo([string]$Phone) {
+  try { Get-CsPhoneNumberAssignment -TelephoneNumber $Phone -ErrorAction Stop | Select-Object -First 1 } catch { $null }
+}
 
-${'__COUNTRY_BLOCK__'}
+__COUNTRY_BLOCK__
 
-$logPath = Join-Path $env:TEMP ("TeamsPhone-D365-{0}.log" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$stamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
+$tempDir  = [IO.Path]::GetTempPath()
+$logPath  = Join-Path $tempDir ("TeamsPhone-D365-{0}.log" -f $stamp)
+$jsonPath = Join-Path $tempDir ("TeamsPhone-D365-{0}.json" -f $stamp)
 try { Start-Transcript -Path $logPath | Out-Null } catch { }
+$report = @()
 
 try {
   # 1) Modules
   Write-Step "Preparing PowerShell modules"
-  foreach ($m in 'MicrosoftTeams','Microsoft.Graph.Authentication','Microsoft.Graph.Applications','Microsoft.Graph.Identity.SignIns','Microsoft.Graph.Identity.DirectoryManagement','Microsoft.Graph.Users','Microsoft.Graph.Users.Actions') { Ensure-Module $m }
+  $mods = @('MicrosoftTeams')
+  if (-not $ListNumbers) { $mods += 'Microsoft.Graph.Authentication','Microsoft.Graph.Applications','Microsoft.Graph.Identity.SignIns','Microsoft.Graph.Identity.DirectoryManagement','Microsoft.Graph.Users','Microsoft.Graph.Users.Actions' }
+  foreach ($m in $mods) { Install-IfMissing $m }
   Import-Module MicrosoftTeams
-  Import-Module Microsoft.Graph.Authentication
+  Write-Ok "MicrosoftTeams $((Get-Module MicrosoftTeams).Version)"
 
   # 2) Sign in (Graph once, Teams once)
   Write-Step "Signing in (use the tenant's own administrator account)"
-  $mg = @{ Scopes = @('Application.ReadWrite.All','DelegatedPermissionGrant.ReadWrite.All','Organization.Read.All','User.ReadWrite.All'); NoWelcome = $true }
-  if ($UseDeviceCode) { $mg.UseDeviceAuthentication = $true }
-  Connect-MgGraph @mg | Out-Null
-  $ctx = Get-MgContext
-  Write-Ok "Microsoft Graph: $($ctx.Account)  (tenant $($ctx.TenantId))"
+  if (-not $ListNumbers) {
+    Import-Module Microsoft.Graph.Authentication
+    if ($CheckOnly) { $scopes = @('Application.Read.All','Directory.Read.All','Organization.Read.All','User.Read.All') }
+    else            { $scopes = @('Application.ReadWrite.All','DelegatedPermissionGrant.ReadWrite.All','Organization.Read.All','User.ReadWrite.All') }
+    $mg = @{ Scopes = $scopes; NoWelcome = $true }
+    if ($UseDeviceCode) { $mg.UseDeviceAuthentication = $true }
+    Connect-MgGraph @mg | Out-Null
+    $ctx = Get-MgContext
+    Write-Ok "Microsoft Graph: $($ctx.Account)  (tenant $($ctx.TenantId))"
+  }
   $tm = @{}
   if ($UseDeviceCode) { $tm.UseDeviceAuthentication = $true }
   Connect-MicrosoftTeams @tm | Out-Null
   Write-Ok "Microsoft Teams connected"
 
-  # 3) Entra app that powers 'Sync from Teams' (delegated TeamsResourceAccount.Read.All + admin consent)
+  # -ListNumbers: show the numbers that can go on a resource account, then stop.
+  if ($ListNumbers) {
+    Write-Step "Free service numbers you can assign to a resource account"
+    $free = @(Get-CsPhoneNumberAssignment -CapabilitiesContain VoiceApplicationAssignment -PstnAssignmentStatus Unassigned -Top 1000)
+    if ($free.Count -eq 0) { Write-Warn2 "None found. Direct Routing numbers may not be listed here: type them in the wizard and pick 'Direct Routing'." }
+    else { $free | Select-Object TelephoneNumber, NumberType, IsoCountryCode, City, ActivationState | Format-Table -AutoSize | Out-String | Write-Host }
+    Write-Host "Type the number(s) you want into the wizard, then run the new script without -ListNumbers." -ForegroundColor Green
+    return
+  }
+
+  # The D365 binding needs -AcsResourceId. Older MicrosoftTeams modules do not have it.
+  $syncCmd = Get-Command Sync-CsOnlineApplicationInstance -ErrorAction SilentlyContinue
+  if (-not $syncCmd -or -not $syncCmd.Parameters.ContainsKey('AcsResourceId')) {
+    $old = (Get-Module MicrosoftTeams).Version
+    if ($CheckOnly) { Add-Failure "MicrosoftTeams module $old is too old (no -AcsResourceId). The script updates it when run without -CheckOnly." }
+    else {
+      Write-Warn2 "MicrosoftTeams module $old has no -AcsResourceId. Installing the latest version ..."
+      Install-Module MicrosoftTeams -Scope CurrentUser -Force -AllowClobber
+      throw "MicrosoftTeams module updated. Close this PowerShell window, open a new one and run the script again."
+    }
+  }
+  $SetHasAcs = (Get-Command Set-CsOnlineApplicationInstance).Parameters.ContainsKey('AcsResourceId')
+  if ($CheckOnly) { Write-Host ""; Write-Host "CHECK-ONLY MODE: nothing will be changed." -ForegroundColor Yellow }
+
+  # 3) Entra app that powers 'Sync from Teams' (delegated TeamsResourceAccount.Read.All + .Read, admin consent)
   if ($CreateEntraApp) {
     Write-Step "Entra app for 'Sync from Teams'"
-    $syncAppName = 'D365 Contact Center - Teams Phone Sync'
-    $graphAppId  = '00000003-0000-0000-c000-000000000000'
-    $scopeName   = 'TeamsResourceAccount.Read.All'
-    $graphSp = Get-MgServicePrincipal -Filter "appId eq '$graphAppId'"
-    $scope   = $graphSp.Oauth2PermissionScopes | Where-Object { $_.Value -eq $scopeName }
-    if (-not $scope) { throw "Microsoft Graph scope '$scopeName' not found in this tenant." }
-    $syncApp = Get-MgApplication -Filter "displayName eq '$syncAppName'" -ConsistencyLevel eventual -CountVariable c -ErrorAction SilentlyContinue | Select-Object -First 1
-    $req = @(@{ ResourceAppId = $graphAppId; ResourceAccess = @(@{ Id = $scope.Id; Type = 'Scope' }) })
+    $graphAppId = '00000003-0000-0000-c000-000000000000'
+    $graphSp    = Get-MgServicePrincipal -Filter "appId eq '$graphAppId'"
+    $wanted     = @('TeamsResourceAccount.Read.All','TeamsResourceAccount.Read')
+    $scopeObjs  = @($graphSp.Oauth2PermissionScopes | Where-Object { $wanted -contains $_.Value })
+    if (-not ($scopeObjs | Where-Object { $_.Value -eq 'TeamsResourceAccount.Read.All' })) { throw "Microsoft Graph scope 'TeamsResourceAccount.Read.All' not found in this tenant." }
+    foreach ($w in $wanted) { if (-not ($scopeObjs | Where-Object { $_.Value -eq $w })) { Write-Warn2 "Graph scope '$w' is not offered in this tenant; skipping it." } }
+    $scopeNames = @($scopeObjs | ForEach-Object { $_.Value })
+    $req = @(@{ ResourceAppId = $graphAppId; ResourceAccess = @($scopeObjs | ForEach-Object { @{ Id = $_.Id; Type = 'Scope' } }) })
+
+    $syncApp = Get-MgApplication -Filter "tags/any(t:t eq '$SyncAppTag')" -ConsistencyLevel eventual -CountVariable c1 -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $syncApp) { $syncApp = Get-MgApplication -Filter "displayName eq '$SyncAppName'" -ConsistencyLevel eventual -CountVariable c2 -ErrorAction SilentlyContinue | Select-Object -First 1 }
     if (-not $syncApp) {
-      $syncApp = New-MgApplication -DisplayName $syncAppName -SignInAudience AzureADMyOrg -RequiredResourceAccess $req
-      Write-Ok "Created Entra app $($syncApp.AppId)"
+      if (Test-ShouldApply "create Entra app '$SyncAppName' with $($scopeNames -join ' + ')") {
+        $syncApp = New-MgApplication -DisplayName $SyncAppName -SignInAudience AzureADMyOrg -RequiredResourceAccess $req -Tags @($SyncAppTag)
+        Write-Ok "Created Entra app $($syncApp.AppId)"
+      }
     } else {
-      $has = $syncApp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq $graphAppId -and ($_.ResourceAccess | Where-Object { $_.Id -eq $scope.Id }) }
-      if (-not $has) { Update-MgApplication -ApplicationId $syncApp.Id -RequiredResourceAccess $req; Write-Ok "Added permission to existing app" }
-      else { Write-Ok "Entra app already present ($($syncApp.AppId))" }
+      $graphReq = $syncApp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq $graphAppId }
+      $missing  = @($scopeObjs | Where-Object { $sid = $_.Id; -not ($graphReq.ResourceAccess | Where-Object { $_.Id -eq $sid }) })
+      if ($missing.Count -eq 0) { Write-Ok "Entra app already present ($($syncApp.AppId))" }
+      elseif (Test-ShouldApply "add $(@($missing | ForEach-Object { $_.Value }) -join ', ') to Entra app $($syncApp.AppId)") {
+        $other  = @($syncApp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -ne $graphAppId })
+        $merged = @($graphReq.ResourceAccess | Where-Object { $_ } | ForEach-Object { @{ Id = $_.Id; Type = $_.Type } }) + @($missing | ForEach-Object { @{ Id = $_.Id; Type = 'Scope' } })
+        Update-MgApplication -ApplicationId $syncApp.Id -RequiredResourceAccess (@($other) + @(@{ ResourceAppId = $graphAppId; ResourceAccess = $merged }))
+        Write-Ok "Added permission(s) to the existing app"
+      }
     }
-    $syncSp = Get-MgServicePrincipal -Filter "appId eq '$($syncApp.AppId)'" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $syncSp) { $syncSp = New-MgServicePrincipal -AppId $syncApp.AppId; Wait-Until { Get-MgServicePrincipal -ServicePrincipalId $syncSp.Id } 60 5 'service principal' | Out-Null }
-    $grant = Get-MgOauth2PermissionGrant -Filter "clientId eq '$($syncSp.Id)' and resourceId eq '$($graphSp.Id)' and consentType eq 'AllPrincipals'" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $grant) { New-MgOauth2PermissionGrant -ClientId $syncSp.Id -ConsentType AllPrincipals -ResourceId $graphSp.Id -Scope $scopeName | Out-Null; Write-Ok "Admin consent granted" }
-    elseif ($grant.Scope -notmatch [regex]::Escape($scopeName)) { Update-MgOauth2PermissionGrant -OAuth2PermissionGrantId $grant.Id -Scope (($grant.Scope + ' ' + $scopeName).Trim()) | Out-Null; Write-Ok "Admin consent updated" }
-    else { Write-Ok "Admin consent already in place" }
+    if ($syncApp) {
+      $syncSp = Get-MgServicePrincipal -Filter "appId eq '$($syncApp.AppId)'" -ErrorAction SilentlyContinue | Select-Object -First 1
+      if (-not $syncSp -and (Test-ShouldApply "create the service principal for $($syncApp.AppId)")) {
+        $syncSp = New-MgServicePrincipal -AppId $syncApp.AppId
+        Wait-Until { Get-MgServicePrincipal -ServicePrincipalId $syncSp.Id } 60 5 'service principal' | Out-Null
+      }
+      if ($syncSp) {
+        $grant = Get-MgOauth2PermissionGrant -Filter "clientId eq '$($syncSp.Id)' and resourceId eq '$($graphSp.Id)' and consentType eq 'AllPrincipals'" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $grant) {
+          if (Test-ShouldApply "grant tenant-wide admin consent for $($scopeNames -join ' + ')") {
+            New-MgOauth2PermissionGrant -ClientId $syncSp.Id -ConsentType AllPrincipals -ResourceId $graphSp.Id -Scope ($scopeNames -join ' ') | Out-Null
+            Write-Ok "Admin consent granted"
+          }
+        } else {
+          $have = @("$($grant.Scope)".Split(' ') | Where-Object { $_ })
+          $add  = @($scopeNames | Where-Object { $have -notcontains $_ })
+          if ($add.Count -eq 0) { Write-Ok "Admin consent already in place" }
+          elseif (Test-ShouldApply "extend admin consent with $($add -join ', ')") {
+            Update-MgOauth2PermissionGrant -OAuth2PermissionGrantId $grant.Id -Scope ((@($have) + $add) -join ' ') | Out-Null
+            Write-Ok "Admin consent updated"
+          }
+        }
+      }
+    }
   }
 
   # 4) License availability (free 'Microsoft Teams Phone Resource Account')
   $vuSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq 'PHONESYSTEM_VIRTUALUSER' } | Select-Object -First 1
+  if (-not $vuSku) { Write-Warn2 "License 'Microsoft Teams Phone Resource Account' (PHONESYSTEM_VIRTUALUSER) is not in this tenant. Add it (free) in M365 admin center > Billing > Purchase services, then re-run." }
 
   # 5) One resource account per number
-  $report = @()
   foreach ($L in $Lines) {
-    Write-Step "Resource account $($L.Upn)  ($($L.Phone))"
-    $ra = Get-CsOnlineApplicationInstance -Identity $L.Upn -ErrorAction SilentlyContinue
+    Write-Step "$($L.Display)  $($L.Phone)  ->  $($L.Upn)"
+
+    # 5a) What Teams knows about the number: type, country, usage, blocks
+    $num = Get-NumberInfo $L.Phone
+    if ($PstnType -ne 'Auto') { $type = $PstnType } elseif ($num) { $type = "$($num.NumberType)" } else { $type = '' }
+    if (-not $type) { Add-Failure "$($L.Phone) is not in this tenant's Teams phone number inventory. Get or port it first. If it is a Direct Routing number, pick 'Direct Routing' in the wizard and use the new script."; continue }
+    if ($num) {
+      Write-Ok ("Teams number: type {0}, country {1}, status {2}" -f $num.NumberType, $num.IsoCountryCode, $num.PstnAssignmentStatus)
+      $caps = @($num.Capability | ForEach-Object { "$_" })
+      if ($caps.Count -gt 0 -and $caps -notcontains 'VoiceApplicationAssignment') { Add-Failure "$($L.Phone) cannot be assigned to a resource account (its usage is not 'Voice app'). Use a service number. Run this script with -ListNumbers to see the ones you can use."; continue }
+      $blk = "$($num.AssignmentBlockedState)"
+      if ($blk -and $blk -ne 'NotBlocked') { Add-Failure "$($L.Phone) has an assignment block ($blk). Remove it with Remove-CsPhoneNumberAssignmentBlock, then re-run."; continue }
+    } else { Write-Warn2 "$($L.Phone) is not in the Teams inventory; treating it as $type." }
+
+    # 5b) Resource account
+    $ra = Get-ResourceAccount $L.Upn
     if (-not $ra) {
+      if (-not (Test-ShouldApply "create resource account $($L.Upn), then set usage location, license, D365 binding and assign $($L.Phone)")) { continue }
       $ra = New-CsOnlineApplicationInstance -UserPrincipalName $L.Upn -DisplayName $L.Display -ApplicationId $AppId
       if (-not $ra -or -not $ra.ObjectId) { Add-Failure "Could not create $($L.Upn)"; continue }
       Write-Ok "Created resource account (ObjectId $($ra.ObjectId))"
       Wait-Until { Get-MgUser -UserId $L.Upn -ErrorAction Stop } 240 10 'directory propagation' | Out-Null
-    } else { Write-Ok "Resource account already exists (ObjectId $($ra.ObjectId))" }
+    } else { Write-Ok "Resource account exists (ObjectId $($ra.ObjectId))" }
 
-    # Usage location must match the number's country before it can be licensed / assigned
-    $iso = Get-CountryCodeFromE164 -PhoneNumber $L.Phone
-    if (-not $iso) { $iso = 'US'; Write-Warn2 "Could not detect country from $($L.Phone); using US" }
+    # 5c) Usage location = the number's country (from Teams; E.164 lookup only as a fallback)
+    if ($num -and "$($num.IsoCountryCode)") { $iso = "$($num.IsoCountryCode)".ToUpper() } else { $iso = Get-CountryCodeFromE164 -PhoneNumber $L.Phone }
     $u = Get-MgUser -UserId $L.Upn -Property UsageLocation,AssignedLicenses
-    if ($u.UsageLocation -ne $iso) { Update-MgUser -UserId $L.Upn -UsageLocation $iso; Write-Ok "UsageLocation set to $iso" } else { Write-Ok "UsageLocation $iso" }
+    if (-not $iso) {
+      if ($u.UsageLocation) { Write-Warn2 "Could not detect the country of $($L.Phone); keeping UsageLocation $($u.UsageLocation)" }
+      else { Add-Failure "Could not detect the country of $($L.Phone). Set the account's usage location in the M365 admin center, then re-run."; continue }
+    } elseif ($u.UsageLocation -eq $iso) { Write-Ok "UsageLocation $iso" }
+    elseif (Test-ShouldApply "set UsageLocation of $($L.Upn) to $iso") { Update-MgUser -UserId $L.Upn -UsageLocation $iso; Write-Ok "UsageLocation set to $iso" }
 
-    if (-not $vuSku) { Write-Warn2 "License 'Microsoft Teams Phone Resource Account' (PHONESYSTEM_VIRTUALUSER) is not in this tenant. Add it (free) in M365 admin center > Billing > Purchase services, then re-run." }
-    elseif ($u.AssignedLicenses.SkuId -contains $vuSku.SkuId) { Write-Ok "License already assigned" }
-    elseif (($vuSku.PrepaidUnits.Enabled - $vuSku.ConsumedUnits) -le 0) { Write-Warn2 "No free 'Microsoft Teams Phone Resource Account' licenses left. Add more (free), then re-run." }
-    else {
-      Set-MgUserLicense -UserId $L.Upn -AddLicenses @(@{ SkuId = $vuSku.SkuId }) -RemoveLicenses @() | Out-Null
-      Write-Ok "License assigned"
-      Start-Sleep -Seconds 20
+    # 5d) Teams Phone Resource Account license
+    if ($vuSku) {
+      if (@($u.AssignedLicenses | ForEach-Object { $_.SkuId }) -contains $vuSku.SkuId) { Write-Ok "License already assigned" }
+      elseif (($vuSku.PrepaidUnits.Enabled - $vuSku.ConsumedUnits) -le 0) { Write-Warn2 "No free 'Microsoft Teams Phone Resource Account' licenses left. Add more (free), then re-run." }
+      elseif (Test-ShouldApply "assign the Teams Phone Resource Account license to $($L.Upn)") {
+        Set-MgUserLicense -UserId $L.Upn -AddLicenses @(@{ SkuId = $vuSku.SkuId }) -RemoveLicenses @() | Out-Null
+        Wait-Until { @((Get-MgUser -UserId $L.Upn -Property AssignedLicenses).AssignedLicenses | ForEach-Object { $_.SkuId }) -contains $vuSku.SkuId } 120 10 'license assignment' | Out-Null
+        Start-Sleep -Seconds 15
+        Write-Ok "License assigned"
+      }
     }
 
-    # Bind to the Dynamics app AND the ACS resource. -AcsResourceId is what lets D365 'Sync from Teams' see this account.
-    $bound = $false
-    for ($i = 1; $i -le 3 -and -not $bound; $i++) {
-      try {
-        Set-CsOnlineApplicationInstance  -Identity $ra.ObjectId -ApplicationId $AppId -ErrorAction Stop | Out-Null
-        Start-Sleep -Seconds 5
-        Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId -ErrorAction Stop | Out-Null
-      } catch { Write-Warn2 "Binding attempt $i : $($_.Exception.Message)" }
-      Start-Sleep -Seconds 10
-      $chk = Get-CsOnlineApplicationInstance -Identity $L.Upn
-      $bound = ($chk.ApplicationId -eq $AppId -and $chk.AcsResourceId -eq $AcsId)
+    # 5e) Bind to the Dynamics app AND the ACS resource. -AcsResourceId is what lets D365 'Sync from Teams' see this account.
+    $cur = Get-ResourceAccount $L.Upn
+    if ($cur -and $cur.ApplicationId -eq $AppId -and "$($cur.AcsResourceId)" -eq $AcsId) { Write-Ok "Already bound to Dynamics app + ACS resource" }
+    elseif (Test-ShouldApply "bind $($L.Upn) to the Dynamics app and the ACS resource") {
+      $bound = $false
+      for ($i = 1; $i -le 3 -and -not $bound; $i++) {
+        try {
+          $setArgs = @{ Identity = $ra.ObjectId; ApplicationId = $AppId; ErrorAction = 'Stop' }
+          if ($SetHasAcs) { $setArgs.AcsResourceId = $AcsId }
+          Set-CsOnlineApplicationInstance @setArgs | Out-Null
+          Start-Sleep -Seconds 5
+          Sync-CsOnlineApplicationInstance -ObjectId $ra.ObjectId -ApplicationId $AppId -AcsResourceId $AcsId -ErrorAction Stop | Out-Null
+        } catch { Write-Warn2 "Binding attempt $i : $($_.Exception.Message)" }
+        Start-Sleep -Seconds 10
+        $chk = Get-ResourceAccount $L.Upn
+        $bound = [bool]($chk -and $chk.ApplicationId -eq $AppId -and "$($chk.AcsResourceId)" -eq $AcsId)
+      }
+      if ($bound) { Write-Ok "Bound to Dynamics app + ACS resource" } else { Add-Failure "Binding to D365 did not stick for $($L.Upn)" }
     }
-    if ($bound) { Write-Ok "Bound to Dynamics app + ACS resource" } else { Add-Failure "Binding to D365 did not stick for $($L.Upn)" }
 
-    # Assign the number
-    $asg = Get-CsPhoneNumberAssignment -TelephoneNumber $L.Phone -ErrorAction SilentlyContinue
+    # 5f) Assign the number (type comes from Teams unless you picked one)
+    $asg = Get-NumberInfo $L.Phone
     if ($asg -and $asg.AssignedPstnTargetId -eq $ra.ObjectId) { Write-Ok "Number already assigned to this account" }
     elseif ($asg -and $asg.AssignedPstnTargetId) { Add-Failure "$($L.Phone) is already assigned to another target ($($asg.AssignedPstnTargetId)). Unassign it first." }
-    else {
+    elseif (Test-ShouldApply "assign $($L.Phone) ($type) to $($L.Upn)") {
       try {
-        switch ($PstnType) {
-          'CallingPlan'     { Set-CsPhoneNumberAssignment -Identity $L.Upn -PhoneNumber $L.Phone -PhoneNumberType CallingPlan -ErrorAction Stop }
-          'OperatorConnect' { Set-CsPhoneNumberAssignment -Identity $L.Upn -PhoneNumber $L.Phone -PhoneNumberType OperatorConnect -ErrorAction Stop }
-          'DirectRouting'   {
-            Set-CsPhoneNumberAssignment -Identity $L.Upn -PhoneNumber $L.Phone -PhoneNumberType DirectRouting -ErrorAction Stop
-            if ($DrPolicy) { Grant-CsOnlineVoiceRoutingPolicy -Identity $L.Upn -PolicyName $DrPolicy -ErrorAction Stop } else { Grant-CsOnlineVoiceRoutingPolicy -Identity $L.Upn -PolicyName $null -ErrorAction Stop }
-          }
+        Set-CsPhoneNumberAssignment -Identity $L.Upn -PhoneNumber $L.Phone -PhoneNumberType $type -ErrorAction Stop
+        if ($type -eq 'DirectRouting') {
+          if ($DrPolicy) { Grant-CsOnlineVoiceRoutingPolicy -Identity $L.Upn -PolicyName $DrPolicy -ErrorAction Stop }
+          else { Grant-CsOnlineVoiceRoutingPolicy -Identity $L.Upn -PolicyName $null -ErrorAction Stop }
         }
         Write-Ok "Number assigned"
       } catch {
@@ -645,17 +801,20 @@ try {
     }
   }
 
-  # 6) Prove it: re-read everything from Teams
+  # 6) Prove it: re-read everything from Teams and Entra
   Write-Step "Verification"
   foreach ($L in $Lines) {
-    $r = Get-CsOnlineApplicationInstance -Identity $L.Upn -ErrorAction SilentlyContinue
-    $a = Get-CsPhoneNumberAssignment -TelephoneNumber $L.Phone -ErrorAction SilentlyContinue
+    $r = Get-ResourceAccount $L.Upn
+    $a = Get-NumberInfo $L.Phone
+    $lic = $false
+    if ($r -and $vuSku) { try { $lic = @((Get-MgUser -UserId $L.Upn -Property AssignedLicenses).AssignedLicenses | ForEach-Object { $_.SkuId }) -contains $vuSku.SkuId } catch { } }
     $checks = [ordered]@{
       'Resource account exists'        = [bool]$r
+      'Resource Account license'       = [bool]$lic
       'ApplicationId = Dynamics app'   = [bool]($r -and $r.ApplicationId -eq $AppId)
       'Not the Call Queue app'         = [bool]($r -and $r.ApplicationId -ne $CallQueueAppId)
-      'AcsResourceId = D365 ACS'       = [bool]($r -and $r.AcsResourceId -eq $AcsId)
-      'Number on the account'          = [bool]($r -and $r.PhoneNumber -like "*$($L.Phone)*")
+      'AcsResourceId = D365 ACS'       = [bool]($r -and "$($r.AcsResourceId)" -eq $AcsId)
+      'Number on the account'          = [bool]($r -and "$($r.PhoneNumber)" -like "*$($L.Phone)*")
       'Number assignment active'       = [bool]($a -and $a.AssignedPstnTargetId -and $r -and $a.AssignedPstnTargetId -eq $r.ObjectId)
     }
     Write-Host ""; Write-Host "  $($L.Display)  $($L.Phone)" -ForegroundColor White
@@ -663,17 +822,34 @@ try {
       if ($checks[$k]) { Write-Host ("    PASS  {0}" -f $k) -ForegroundColor Green }
       else { Write-Host ("    FAIL  {0}" -f $k) -ForegroundColor Red; [void]$script:Failures.Add("$($L.Phone): $k") }
     }
+    $report += [pscustomobject]@{ Display = $L.Display; Phone = $L.Phone; Upn = $L.Upn; Checks = $checks }
   }
 
   Write-Host ""
-  if ($script:Failures.Count -eq 0) {
+  if ($CheckOnly) {
+    Write-Host ("CHECK ONLY: nothing was changed. {0} change(s) would be made:" -f $script:Planned.Count) -ForegroundColor Yellow
+    $script:Planned | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+    Write-Host "Run the script again without -CheckOnly to apply them." -ForegroundColor Yellow
+  } elseif ($script:Failures.Count -eq 0) {
     Write-Host "ALL CHECKS PASSED" -ForegroundColor Green
-    Write-Host "Next: go back to the wizard and click 'Sync now'. (Teams -> D365 can take a few minutes.)" -ForegroundColor Green
+    Write-Host "Next: go back to the wizard. If it is still open it syncs on its own; otherwise click 'Sync now'. (Teams -> D365 can take a few minutes.)" -ForegroundColor Green
   } else {
     Write-Host "SOME CHECKS FAILED:" -ForegroundColor Red
     $script:Failures | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     Write-Host "Fix the items above (see the wizard's Troubleshooting) and re-run this script. It is safe to re-run." -ForegroundColor Yellow
   }
+  try {
+    [pscustomobject]@{
+      GeneratedBy = 'Teams Phone wizard v__VERSION__'
+      RanAt       = (Get-Date).ToString('o')
+      CheckOnly   = [bool]$CheckOnly
+      Passed      = (-not $CheckOnly -and $script:Failures.Count -eq 0)
+      Failures    = @($script:Failures)
+      Planned     = @($script:Planned)
+      Numbers     = $report
+    } | ConvertTo-Json -Depth 6 | Set-Content -Path $jsonPath -Encoding UTF8
+    Write-Host "Result: $jsonPath" -ForegroundColor DarkGray
+  } catch { }
   Write-Host "Log: $logPath" -ForegroundColor DarkGray
 }
 catch {
@@ -684,12 +860,14 @@ finally {
   try { Disconnect-MgGraph | Out-Null } catch { }
   try { Stop-Transcript | Out-Null } catch { }
 }
-`.replace('__COUNTRY_BLOCK__', () => COUNTRY_BLOCK);
-}
-
-const COUNTRY_BLOCK = String.raw`# ── Helpers: country detection from E.164 phone number ───────────────────────
+`;
+const COUNTRY_BLOCK = String.raw`# -- Helper: country of an E.164 number (fallback when Teams does not report it) --
 function Get-CountryCodeFromE164 {
   param([Parameter(Mandatory)][string]$PhoneNumber)
+  $p = $PhoneNumber.Trim()
+  # Canada shares +1 with the US: match its area codes first.
+  $ca = '204','226','236','249','250','257','263','289','306','343','354','365','367','368','382','387','403','416','418','428','431','437','438','450','460','468','474','506','514','519','548','579','581','584','587','604','613','639','647','672','683','705','709','742','753','778','780','782','807','819','825','867','873','879','902','905','942'
+  if ($p.StartsWith('+1') -and $p.Length -ge 5 -and $ca -contains $p.Substring(2,3)) { return 'CA' }
   $codes = [ordered]@{
     "+1242"="BS";"+1246"="BB";"+1264"="AI";"+1268"="AG";"+1284"="VG";"+1340"="VI"
     "+1345"="KY";"+1441"="BM";"+1473"="GD";"+1649"="TC";"+1664"="MS";"+1670"="MP"
@@ -729,25 +907,31 @@ function Get-CountryCodeFromE164 {
     "+64"="NZ";"+65"="SG";"+66"="TH";"+81"="JP";"+82"="KR";"+84"="VN"
     "+86"="CN";"+90"="TR";"+91"="IN";"+92"="PK";"+93"="AF";"+94"="LK"
     "+95"="MM";"+98"="IR"
-    "+7"="RU";"+1"="US"
+    "+76"="KZ";"+77"="KZ";"+7"="RU";"+1"="US"
   }
-  foreach ($prefix in $codes.Keys) {
-    if ($PhoneNumber.StartsWith($prefix)) { return $codes[$prefix] }
+  # Longest prefix wins (+1242 before +1, +77 before +7).
+  foreach ($prefix in ($codes.Keys | Sort-Object { $_.Length } -Descending)) {
+    if ($p.StartsWith($prefix)) { return $codes[$prefix] }
   }
   return $null
-}
-
-function Get-CountryNameFromIso {
-  param([Parameter(Mandatory)][string]$IsoCode)
-  $cult = [System.Globalization.CultureInfo]::GetCultures(
-    [System.Globalization.CultureTypes]::SpecificCultures) |
-    Where-Object {
-      try { ([System.Globalization.RegionInfo]::new($_.Name)).TwoLetterISORegionName -eq $IsoCode.ToUpper() }
-      catch { $false }
-    } | Select-Object -First 1
-  if (-not $cult) { return $null }
-  return ([System.Globalization.RegionInfo]::new($cult.Name)).EnglishName
 }`;
+
+function buildPs(){
+  const appId = escapePs((state.appId||'<DYNAMICS_APP_ID>').trim());
+  const acsId = escapePs((state.acs||'<ACS_RESOURCE_ID>').trim());
+  const pstn  = PSTN_TYPES.includes(state.pstn) ? state.pstn : 'Auto';
+  const drPolicy = (!state.drPolicy || /^\s*global\b|org-?wide/i.test(state.drPolicy)) ? '' : escapePs(state.drPolicy);
+  const lines = state.lines.map(l =>
+    `  @{ Display = "${escapePs(l.display||'<DisplayName>')}"; Upn = "${escapePs((l.upn||'<UPN>').trim())}"; Phone = "${escapePs((l.phone||'<+E164>').trim())}" }`
+  ).join('\n');
+  const values = {
+    __VERSION__: WIZARD_VERSION, __APP_ID__: appId, __ACS_ID__: acsId, __PSTN__: pstn, __DR_POLICY__: drPolicy,
+    __DEVICE__: state.device ? '$true' : '$false', __ENTRA__: state.entra ? '$true' : '$false',
+    __LINES__: lines, __COUNTRY_BLOCK__: COUNTRY_BLOCK
+  };
+  // Function replacer: values are inserted literally (no "$&"-style patterns).
+  return PS_TEMPLATE.replace(/__[A-Z_]+__/g, k => Object.prototype.hasOwnProperty.call(values, k) ? values[k] : k);
+}
 
 function highlightPs(src){
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -761,9 +945,10 @@ function highlightPs(src){
 
 /* ---------- refresh ---------- */
 const PSTN_HELP = {
+  Auto: 'Recommended. The script reads each number\u2019s type (Calling Plan, Operator Connect or Direct Routing) and country from Teams, so mixed types work in one run.',
   CallingPlan: 'Calling Plan service numbers. The script tries to assign the number automatically; if Teams refuses, it prints the exact admin-center clicks.',
   OperatorConnect: 'Operator Connect. The script assigns the number with Set-CsPhoneNumberAssignment.',
-  DirectRouting: 'Direct Routing. The script assigns the number and grants the voice routing policy below.'
+  DirectRouting: 'Direct Routing. Pick this when the number is not yet in the Teams number inventory. The script assigns it and grants the voice routing policy below.'
 };
 function refresh(full){
   $('f_acs').value = state.acs || '';
@@ -771,10 +956,11 @@ function refresh(full){
   $('f_drPolicy').value = state.drPolicy || '';
   $('o_device').checked = !!state.device;
   $('o_entra').checked = !!state.entra;
+  $('o_watch').checked = !!state.autoWatch;
   $('auto_acs').textContent = env.acsAuto ? '\u00b7 auto-detected' : '';
   $('auto_appId').textContent = env.appAuto ? '\u00b7 auto-detected' : '';
-  document.querySelectorAll('#pstnTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.pstn===state.pstn));
-  $('drPolicyWrap').style.display = state.pstn==='DirectRouting' ? '' : 'none';
+  document.querySelectorAll('#pstnTabs .tab').forEach(t => { const on = t.dataset.pstn===state.pstn; t.classList.toggle('active', on); t.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  $('drPolicyWrap').style.display = (state.pstn==='DirectRouting' || state.pstn==='Auto') ? '' : 'none';
   $('pstnHelp').textContent = PSTN_HELP[state.pstn] || '';
   $('psBlock').innerHTML = highlightPs(buildPs());
   validateAll(false);
@@ -791,12 +977,9 @@ function setStepper(active, doneUpTo){
 }
 function updateStepper(){
   const ready = validateAll(false) && env.voiceOk;
-  const wanted = state.lines.map(l => (l.phone||'').trim()).filter(Boolean);
-  const inD365 = wanted.length && wanted.every(n => (env.numbers||[]).some(x => x.number === n));
-  const attached = inD365 && wanted.every(n => { const x=(env.numbers||[]).find(y=>y.number===n); return x && env.attached && env.attached.has(x.id); });
-  if(attached) return setStepper(4, 4);
-  if(inD365)   return setStepper(4, 3);
-  if(scriptDone) return setStepper(3, 2);
+  if(allAttached()) return setStepper(0, 4);
+  if(allPresent())  return setStepper(4, 3);
+  if(state.scriptDone) return setStepper(3, 2);
   if(ready)    return setStepper(2, 1);
   setStepper(1, 0);
 }
@@ -806,16 +989,35 @@ function needValid(){
   if(!validateAll(true)){ toast('Fix the highlighted fields first', 'err'); return false; }
   return true;
 }
-$('btnCopyPs').onclick = () => {
+// navigator.clipboard is often blocked inside the D365 iframe: fall back to a hidden textarea.
+async function copyText(text){
+  try{ if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(text); return true; } }catch(e){}
+  try{
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly','');
+    ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove(); return ok;
+  }catch(e){ return false; }
+}
+function scriptHandedOff(){
+  state.scriptDone = true; state.scriptAt = Date.now(); persist(); updateStepper();
+  if(state.autoWatch && !allPresent()) runSyncLoop('watch');
+}
+$('btnCopyPs').onclick = async () => {
   if(!needValid()) return;
-  navigator.clipboard.writeText(buildPs()).then(()=> { toast('PowerShell copied. Paste it into a PowerShell window.'); scriptDone = true; updateStepper(); });
+  if(!(await copyText(buildPs()))){ toast('Your browser blocked the clipboard here. Use Download .ps1 instead.', 'err'); return; }
+  toast('PowerShell copied. Paste it into a PowerShell window.');
+  scriptHandedOff();
 };
 $('btnDownload').onclick = () => {
   if(!needValid()) return;
-  const blob = new Blob([buildPs()], {type:'text/plain;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'Onboard-TeamsPhone.ps1'; a.click();
-  scriptDone = true; updateStepper();
+  // UTF-8 BOM so Windows PowerShell 5.1 reads accented display names correctly.
+  const url = URL.createObjectURL(new Blob(['\ufeff' + buildPs()], {type:'text/plain;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url; a.download = 'Onboard-TeamsPhone.ps1';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  toast('Script downloaded. Run it in PowerShell.');
+  scriptHandedOff();
 };
 $('pstnTabs').addEventListener('click', e => {
   const t = e.target.closest('.tab'); if(!t) return;
@@ -823,12 +1025,12 @@ $('pstnTabs').addEventListener('click', e => {
 });
 $('f_drPolicy').addEventListener('input', e => { state.drPolicy = e.target.value.trim(); persist(); refresh(false); });
 $('f_acs').addEventListener('input', e => { state.acs = e.target.value.trim(); state.acsManual = true; env.acsAuto = false; persist(); refresh(); });
-$('f_appId').addEventListener('input', e => { state.appId = e.target.value.trim(); state.appManual = true; env.appAuto = false; persist(); refresh(); });
+$('f_appId').addEventListener('input', e => { state.appId = e.target.value.trim(); state.appManual = true; env.appAuto = false; env.appNote = ''; persist(); refresh(); });
 $('o_device').addEventListener('change', e => { state.device = e.target.checked; persist(); refresh(false); });
 $('o_entra').addEventListener('change', e => { state.entra = e.target.checked; persist(); refresh(false); });
+$('o_watch').addEventListener('change', e => { state.autoWatch = e.target.checked; persist(); if(!state.autoWatch && loop && loop.mode==='watch') loop.abort = true; });
 
 /* ---------- sync + verify ---------- */
-let syncAbort = false;
 function log(msg){ const el = $('syncLog'); el.textContent += (el.textContent.endsWith('\n') || !el.textContent ? '' : '\n') + `[${new Date().toLocaleTimeString()}] ${msg}`; el.scrollTop = el.scrollHeight; }
 function resetLog(){ $('syncLog').textContent = ''; }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -836,101 +1038,147 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function callSync(){
   if(!env.providerId) throw new Error('No active Teams Phone System provider found in this environment.');
   return dv(`msdyn_occommunicationprovidersettings(${env.providerId})/Microsoft.Dynamics.CRM.CCaaS_SynchronizePhoneNumbers()`,
-    {method:'POST', headers:{Accept:'application/json','Content-Type':'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0'}, body:'{}'}, 'v9.0');
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}, 'v9.0');
 }
 
 function renderResults(){
-  const wanted = state.lines.filter(l => (l.phone||'').trim());
+  const rows = state.lines.filter(l => (l.phone||'').trim());
   const tb = $('resTable').querySelector('tbody'); tb.innerHTML = '';
-  wanted.forEach(l => {
-    const n = (env.numbers||[]).find(x => x.number === l.phone.trim());
+  rows.forEach(l => {
+    const n = findNumber(l.phone);
     const tr = document.createElement('tr');
     const c = (txt) => { const td=document.createElement('td'); td.textContent = txt; tr.appendChild(td); return td; };
     c(l.phone); c(l.upn);
     const p1 = document.createElement('td'); const s1 = document.createElement('span'); s1.className='pill ' + (n?'ok':'wait'); s1.textContent = n ? 'imported' : 'not yet'; p1.appendChild(s1); tr.appendChild(p1);
     const p2 = document.createElement('td'); const s2 = document.createElement('span');
-    const att = n && env.attached && env.attached.has(n.id);
-    s2.className='pill ' + (att?'ok':(n?'wait':'bad')); s2.textContent = att ? 'attached' : (n ? 'not attached' : '\u2014'); p2.appendChild(s2); tr.appendChild(p2);
+    const ws = n ? env.attached.get(n.id) : null;
+    s2.className='pill ' + (ws?'ok':(n?'wait':'bad')); s2.textContent = ws ? 'attached' : (n ? 'not attached' : '\u2014'); p2.appendChild(s2);
+    if(ws){ const sm = document.createElement('span'); sm.style.marginLeft = '6px'; sm.textContent = ws; p2.appendChild(sm); }
+    tr.appendChild(p2);
     tb.appendChild(tr);
   });
-  $('resTable').style.display = wanted.length ? '' : 'none';
-}
-function allPresent(){
-  const wanted = state.lines.map(l => (l.phone||'').trim()).filter(Boolean);
-  return wanted.length > 0 && wanted.every(n => (env.numbers||[]).some(x => x.number === n));
+  $('resTable').style.display = rows.length ? '' : 'none';
 }
 
 function syncHelp(kind){
   const h = $('syncHelp'); h.innerHTML = '';
   if(!kind) return;
-  const b = document.createElement('div'); b.className = 'banner ' + (kind==='ok'?'ok':'warn');
-  const ic = document.createElement('span'); ic.className='ic'; ic.textContent = kind==='ok'?'\u2713':'!';
+  const b = document.createElement('div'); b.className = 'banner ' + (kind==='warn' ? 'warn' : 'ok');
+  const ic = document.createElement('span'); ic.className='ic'; ic.textContent = kind==='warn' ? '!' : '\u2713';
   const d = document.createElement('div');
-  d.textContent = kind==='ok'
-    ? 'All numbers are imported. Last step: attach each number to a voice workstream (Customer support \u2192 Workstreams).'
-    : 'Numbers did not appear after several attempts. Re-run the PowerShell script and confirm it ends with ALL CHECKS PASSED (it repairs ApplicationId / AcsResourceId), wait ~5 minutes, then click Sync again. Also make sure the number has "Voice app" usage in Teams and a Teams Phone Resource Account license is on the account.';
+  d.textContent = {
+    ok:   'All numbers are imported. Last step: attach each number to a voice workstream (button below). This page notices when you do.',
+    done: 'Setup complete: every number is imported and attached to a voice workstream. Call the number to test it.',
+    warn: 'Numbers did not appear in time. Re-run the PowerShell script and confirm it ends with ALL CHECKS PASSED (it repairs ApplicationId / AcsResourceId), wait ~5 minutes, then click Sync again. Also make sure the number has "Voice app" usage in Teams and a Teams Phone Resource Account license is on the account.'
+  }[kind];
   b.appendChild(ic); b.appendChild(d); h.appendChild(b);
 }
 
-$('btnStopSync').onclick = () => { syncAbort = true; };
-$('btnRefresh').onclick = async () => { await loadSyncedNumbers(); renderResults(); renderChecks(); updateStepper(); toast('Status refreshed'); };
-
-$('btnSync').onclick = async () => {
-  if(state.lines.some(l => !E164_RE.test((l.phone||'').trim()))){ validateAll(true); toast('Enter your phone number(s) first', 'err'); return; }
-  const btn = $('btnSync'); btn.disabled = true; $('btnStopSync').style.display = ''; syncAbort = false; syncHelp(null); resetLog();
-  const maxAttempts = 10;
+/* One loop for both modes.
+   manual: sync now, then every 45 s, for up to 10 minutes.
+   watch:  started when the script is copied/downloaded; checks every 30 s and syncs every 2 minutes, for up to 30 minutes.
+   Time is counted from the waits themselves so the loop stays predictable when the tab is in the background. */
+let loop = null;
+async function runSyncLoop(mode){
+  if(loop) loop.abort = true;
+  const me = { mode, abort:false, kick:false, t:0 }; loop = me;
+  const manual = mode === 'manual';
+  const maxMs = manual ? 10*60e3 : 30*60e3, syncEvery = manual ? 45e3 : 120e3, tick = manual ? 15e3 : 30e3;
+  let lastSync = manual ? -syncEvery : 0, attempts = 0;
+  const btn = $('btnSync'); btn.disabled = true; $('btnStopSync').style.display = ''; syncHelp(null); resetLog();
+  log(manual ? 'Asking D365 to import your numbers from Teams\u2026'
+             : 'Watching for your numbers while the script runs: the wizard syncs from Teams every 2 minutes (up to 30 minutes). Leave this page open.');
+  const wait = async ms => { for(let s=0; s<ms && !me.abort && !me.kick; s+=1000){ await sleep(1000); me.t += 1000; } };
   try{
-    for(let i=1; i<=maxAttempts && !syncAbort; i++){
-      log(`Attempt ${i}/${maxAttempts}: asking D365 to import numbers from Teams\u2026`);
-      try{
-        const r = await callSync();
-        log(`D365 answered. TotalTeamsNumbers = ${r && r.TotalTeamsNumbers !== undefined ? r.TotalTeamsNumbers : 'n/a'}`);
-      }catch(e){ log(`Sync call failed (${e.status||''} ${e.message}). ${e.body ? e.body.slice(0,200) : ''}`); }
-      await sleep(4000);
-      await loadSyncedNumbers(); renderResults();
-      if(allPresent()){ log('All requested numbers are now in D365.'); syncHelp('ok'); break; }
-      const missing = state.lines.map(l=>(l.phone||'').trim()).filter(n => n && !(env.numbers||[]).some(x=>x.number===n));
-      log(`Not there yet: ${missing.join(', ')}.${i<maxAttempts ? ' Waiting 45 s, then retrying\u2026' : ''}`);
-      for(let s=0; s<45 && !syncAbort && i<maxAttempts; s++) await sleep(1000);
-      if(i===maxAttempts) syncHelp('warn');
+    while(!me.abort && me.t < maxMs){
+      let synced = false;
+      if(me.kick || me.t - lastSync >= syncEvery){
+        me.kick = false; lastSync = me.t; attempts++; synced = true;
+        try{
+          const r = await callSync();
+          log(`Sync ${attempts}: D365 answered. TotalTeamsNumbers = ${r && r.TotalTeamsNumbers !== undefined && r.TotalTeamsNumbers !== null ? r.TotalTeamsNumbers : 'none yet'}`);
+        }catch(e){ log(`Sync ${attempts} failed (${e.status||''} ${e.message}). ${e.body ? e.body.slice(0,200) : ''}`); }
+        await wait(4000);
+      }
+      if(me.abort) break;
+      await loadSyncedNumbers(); renderResults(); updateStepper();
+      if(allPresent()){ log('All requested numbers are now in D365.'); syncHelp(allAttached() ? 'done' : 'ok'); startAttachWatch(); return; }
+      if(synced){
+        const missing = wantedNumbers().filter(n => !findNumber(n));
+        log(`Not there yet: ${missing.join(', ')}.`);
+      }
+      await wait(tick);
     }
-    if(syncAbort) log('Stopped.');
+    if(me.abort){ if(loop === me) log('Stopped.'); }
+    else { log('Stopped waiting.'); syncHelp('warn'); }
   } finally {
-    btn.disabled = false; $('btnStopSync').style.display = 'none';
+    if(loop === me){ loop = null; btn.disabled = false; $('btnStopSync').style.display = 'none'; }
     renderChecks(); updateStepper();
   }
+}
+// Coming back to this tab (e.g. after the script finished) triggers an immediate sync.
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && loop && loop.mode === 'watch') loop.kick = true; });
+
+/* After import, keep an eye on workstream attachment so step 4 completes on its own. */
+let attachWatch = null;
+function startAttachWatch(){
+  if(attachWatch || allAttached()) return;
+  const me = { abort:false }; attachWatch = me;
+  (async () => {
+    try{
+      for(let i = 0; i < 60 && !me.abort; i++){   // every 30 s for up to 30 minutes
+        await sleep(30000);
+        await loadSyncedNumbers(); renderResults(); updateStepper();
+        if(allAttached()){ syncHelp('done'); toast('All numbers are attached to a workstream.'); break; }
+      }
+    } finally { if(attachWatch === me) attachWatch = null; }
+  })();
+}
+
+$('btnStopSync').onclick = () => { if(loop) loop.abort = true; };
+$('btnRefresh').onclick = async () => { await loadSyncedNumbers(); renderResults(); renderChecks(); updateStepper(); toast('Status refreshed'); };
+$('btnSync').onclick = () => {
+  if(state.lines.some(l => !E164_RE.test((l.phone||'').trim()))){ validateAll(true); toast('Enter your phone number(s) first', 'err'); return; }
+  runSyncLoop('manual');
 };
 
-/* ---------- D365 Phone numbers deep link (resolved at runtime so it works in any tenant) ---------- */
-async function setChannelsLink(){
-  const a = $('lnkChannels'); a.href = ORG_URL + '/main.aspx';
+/* ---------- D365 deep links (resolved at runtime so they work in any tenant) ---------- */
+async function setLinks(){
+  const ch = $('lnkChannels'), ws = $('lnkWorkstreams');
+  ch.href = ORG_URL + '/main.aspx';
+  ws.href = ORG_URL + '/main.aspx?pagetype=entitylist&etn=msdyn_liveworkstream';
   try{
     const j = await dv(`appmodules?$select=uniquename,name&$filter=statecode eq 0`);
     const apps = j.value || [];
     const have = new Set(apps.map(x => x.uniquename));
     const admin = ['msdyn_CSAdminCenter'].find(u => have.has(u)) || (apps.find(x => /admin\s*center/i.test(x.name||''))||{}).uniquename;
-    if(admin){ a.href = `${ORG_URL}/main.aspx?appname=${encodeURIComponent(admin)}&pagetype=control&controlName=MscrmControls.ModernAdmin.PhoneNumbersControl`; return; }
-    const fb = ['msdyn_CustomerServiceWorkspace','OmniChannelEngagementHub','Customerservicehub'].find(u => have.has(u));
-    if(fb) a.href = `${ORG_URL}/main.aspx?appname=${encodeURIComponent(fb)}`;
+    const app = admin || ['msdyn_CustomerServiceWorkspace','OmniChannelEngagementHub','Customerservicehub'].find(u => have.has(u));
+    if(admin) ch.href = `${ORG_URL}/main.aspx?appname=${encodeURIComponent(admin)}&pagetype=control&controlName=MscrmControls.ModernAdmin.PhoneNumbersControl`;
+    else if(app) ch.href = `${ORG_URL}/main.aspx?appname=${encodeURIComponent(app)}`;
+    if(app) ws.href = `${ORG_URL}/main.aspx?appname=${encodeURIComponent(app)}&pagetype=entitylist&etn=msdyn_liveworkstream`;
   }catch(e){}
 }
 
 /* ---------- init ---------- */
 (async function init(){
+  $('ver').textContent = 'v' + WIZARD_VERSION;
   renderLines();
   await detectContext();
   renderLines();
   refresh();
   if(!ORG_URL || /localhost|127\.0\.0\.1/.test(ORG_URL)) banner('info', 'Preview mode: not running inside a D365 environment, so values will not be auto-detected.');
   await detectEnvironment();
-  if(env.voiceOk && GUID_RE.test(state.acs||'') && GUID_RE.test(state.appId||'')) $('overrideBox').open = false;
+  if(env.voiceOk && GUID_RE.test(state.acs||'') && GUID_RE.test(state.appId||'') && !env.appNote) $('overrideBox').open = false;
   if(!env.voiceOk) banner('warn', 'Voice channel with Teams Phone System not detected in this environment. Provision Voice in the Customer Service admin center first (Channels \u2192 Phone numbers \u2192 Get started), then reload this page.');
-  else banner('ok', 'Environment detected. Add your number(s), run the script, then click Sync.');
+  else banner('ok', 'Environment detected. Add your number(s) and run the script. The wizard syncs and verifies on its own afterwards.');
   persist();
   renderLines();
   refresh();
   renderResults();
-  setChannelsLink();
+  setLinks();
+  // Pick up where the admin left off: numbers imported -> watch attachment; script handed off recently -> keep syncing.
+  if(allPresent()){ syncHelp(allAttached() ? 'done' : 'ok'); startAttachWatch(); }
+  else if(state.autoWatch && state.scriptDone && Date.now() - (state.scriptAt||0) < 2*3600e3 && wantedNumbers().length) runSyncLoop('watch');
 })();
 </script>
 </body>

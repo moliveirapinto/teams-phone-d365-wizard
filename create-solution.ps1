@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   # Target Dataverse environment URL.
   [string]$OrgUrl = $env:DATAVERSE_URL,
@@ -7,7 +7,7 @@ param(
   # different names/prefixes — nothing here is tied to a specific tenant.
   [string]$SolutionUniqueName = 'mauTeamsPhoneSetup',
   [string]$SolutionFriendlyName = 'Teams Phone for D365 Contact Center',
-  [string]$SolutionVersion = '1.0.4.0',
+  [string]$SolutionVersion = '1.0.5.0',
   [string]$SolutionDescription = 'Self-serve wizard that brings a Teams Phone number into the D365 Contact Center voice channel. Generates an idempotent PowerShell onboarding script (Teams + Microsoft Graph) and links to the relevant admin portals.',
 
   [string]$PublisherUniqueName = 'mauPublisher',
@@ -68,12 +68,16 @@ if ($pubResp.value.Count -gt 0) {
   Write-Host "  Created publisher $publisherId" -ForegroundColor Green
 }
 
-# 2) Solution (idempotent)
+# 2) Solution (idempotent). An existing solution is moved to -SolutionVersion so the exported zips carry it.
 Write-Host "Ensuring solution '$SolutionUniqueName'..." -ForegroundColor Cyan
 $solResp = Invoke-Dv GET "solutions?`$select=solutionid,uniquename,version&`$filter=uniquename eq '$SolutionUniqueName'"
 if ($solResp.value.Count -gt 0) {
   $solutionId = $solResp.value[0].solutionid
   Write-Host "  Reusing solution $solutionId (version $($solResp.value[0].version))" -ForegroundColor DarkGray
+  if ($solResp.value[0].version -ne $SolutionVersion) {
+    Invoke-Dv PATCH "solutions($solutionId)" @{ version = $SolutionVersion } | Out-Null
+    Write-Host "  Version set to $SolutionVersion" -ForegroundColor Green
+  }
 } else {
   $solBody = @{
     uniquename                              = $SolutionUniqueName

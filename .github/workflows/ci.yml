@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependency
+        run: npm i --no-save playwright-core
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Start mock Dataverse
+        run: |
+          node tests/mock-d365-server.js 8765 &
+          sleep 2
+
+      - name: Smoke test (wizard + generated script)
+        env:
+          CHANNEL: chrome
+          LINT: '1'
+        run: node tests/smoke.js
