@@ -157,7 +157,7 @@ Get-CsOnlineApplicationInstance -Identity <resource-account-upn> | fl AcsResourc
 
 ### How you know it worked
 
-The number appears under **Channels → Phone numbers** with *Type: Teams* and *Status: Ready for setup*, and the wizard's table shows **imported** (then **attached** once it is on a workstream). When every number is attached, all four steps turn green and the wizard shows **Setup complete**.
+The number appears in the list under **Channels → Phone numbers** (under *Ready for setup*), and the wizard's table shows **imported** (then **attached** once it is on a workstream). When every number is attached, all four steps turn green and the wizard shows **Setup complete**.
 
 ---
 ## Updating to a new version
@@ -183,12 +183,12 @@ When a new release is published:
 
 | Symptom | What to do |
 |---|---|
-| Wizard banner: **"Voice channel with Teams Phone System not detected in this environment"** | The Voice channel has not been provisioned in this environment yet. Provision it in the Customer Service admin center (**Channels → Phone numbers → Get started**), then reload the wizard. |
+| Wizard banner: **"Voice channel with Teams Phone System not detected in this environment"** | The Voice channel has not been provisioned in this environment yet. Provision it in the Copilot Service admin center (**Channels → Phone numbers**), then reload the wizard. |
 | PowerShell script fails with **"insufficient privileges"** | The account running the script lacks a role it needs (Teams Administrator, license assignment or admin consent). A Global Administrator covers all of it. Have the right person re-run it. |
 | Script stops with **"MicrosoftTeams module … has no -AcsResourceId"** | The script has already installed the latest module. Close PowerShell, open a new window and run it again. |
 | **"not in this tenant's Teams phone number inventory"** or **"usage is not 'Voice app'"** | Use a service number with *Voice app* usage. Run the script with `-ListNumbers` to see the ones you can use. For a Direct Routing number, pick *Direct Routing* in the wizard and use the new script. |
 | **"has an assignment block"** | Remove it with `Remove-CsPhoneNumberAssignmentBlock` (or wait until it expires), then re-run. |
-| `New-CsOnlineApplicationInstance: ... license required` | The resource account is missing the Teams Phone Resource Account license. Add the (free) license in M365 admin center > Billing > Purchase services if the tenant has none, then re-run the script. It assigns the license for you. |
+| `New-CsOnlineApplicationInstance: ... license required` | The resource account is missing the Teams Phone Resource Account license. If the tenant has none, get the zero-cost license in M365 admin center > Marketplace > All products (or through the channel you bought Teams Phone from, e.g. EA or CSP), then re-run the script. It assigns the license for you. |
 | The number does not appear in D365 after the script succeeds | Leave the wizard open: it keeps syncing for 30 minutes. Or click **Sync now & wait for my numbers** (retries for ~10 minutes). Teams → D365 sync is not instant; in testing it took a few minutes after the Teams side was fixed. |
 | Sync says **"No new phone numbers were found in Teams Admin Center to sync"** | This message is generic. It also appears when D365 cannot match the account. Re-run the script (it verifies and repairs the binding) or run the *Manual verification* above: the usual causes are a wrong `ApplicationId` or `AcsResourceId` = `ACS_Resource_ID_Not_Set`. Fix with `Set-` / `Sync-CsOnlineApplicationInstance ... -AcsResourceId`, wait a few minutes, sync again. |
 | Wizard log keeps showing `TotalTeamsNumbers = none yet` (browser dev tools: `TotalTeamsNumbers: null` on `CCaaS_SynchronizePhoneNumbers`) | Same root cause as above: D365 found no Teams numbers bound to the ACS resource. |
